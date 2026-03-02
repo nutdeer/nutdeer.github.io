@@ -1,0 +1,246 @@
+{% extends "page.html" %}
+
+{% block main %}
+<style>
+/* === 基础控制与颜色 === */
+:root {
+    --cal-empty-wd: #ebedf0; /* 淡蓝色：周一到周五(空) */
+    --cal-empty-we: #E6E6FA; /* 淡绿色：周末(空) */
+
+    /* 状态颜色 (低饱和度) */
+    --cal-work: #6b7b8c;     /* 灰蓝色：工作 */
+    --cal-rest: #8ba89a;     /* 鼠尾草绿：休息 */
+    --cal-study: #c2a878;    /* 驼色/燕麦黄：学习 */
+}
+/* 夜间模式适配 (自动变暗，保持高级感) */
+[data-theme="dark"] {
+    /* 空白底色 (GitHub 深色模式同款灰) */
+    --cal-empty-wd: #2d333b; 
+    --cal-empty-we: #22272e; 
+    
+    /* 状态颜色 (在黑底上稍微提亮一点点以保证清晰度) */
+    --cal-work: #7a8c9e;     
+    --cal-rest: #9cbcae;     
+    --cal-study: #d4bb89;    
+}
+
+.journal-container { margin-top: 20px; }
+.view-switches { margin-bottom: 30px; display: flex; gap: 15px; justify-content: center; align-items: center; }
+.view-switches button {
+    padding: 8px 20px; background: var(--tertiary); color: var(--primary);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    font-size: 16px; font-weight: bold; transition: 0.2s;
+}
+.view-switches button:hover, .view-switches button.active { background: var(--border); transform: translateY(-2px); }
+
+/* 年份选择器样式 */
+#year-select {
+    padding: 8px 15px; background: var(--entry); color: var(--primary);
+    border: 1px solid var(--border); border-radius: 6px; font-weight: bold;
+    font-size: 16px; cursor: pointer; outline: none;
+}
+
+.hidden { display: none !important; }
+
+/* === 日历热力图模式 === */
+.calendar-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;
+}
+.month-block { border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: var(--entry); }
+.month-block h3 { margin-top: 0; margin-bottom: 10px; font-size: 18px; color: var(--primary); text-align: center;}
+
+/* 星期表头 */
+.week-header { 
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; 
+    text-align: center; font-size: 12px; color: var(--secondary); margin-bottom: 8px; font-weight: bold;
+}
+/* 7列对齐的网格 */
+.days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; justify-items: center; }
+
+.day-cell { width: 22px; height: 22px; position: relative; cursor: pointer; border-radius: 4px; transition: 0.1s;}
+.day-cell.interactive:hover { transform: scale(1.2); z-index: 2; border: 1px solid rgba(0,0,0,0.2);}
+
+.bg-empty-wd { background-color: var(--cal-empty-wd); }
+.bg-empty-we { background-color: var(--cal-empty-we); }
+.bg-work { background-color: var(--cal-work); }
+.bg-rest { background-color: var(--cal-rest); }
+.bg-study { background-color: var(--cal-study); }
+
+.tooltip {
+    visibility: hidden; width: 180px; background: var(--bg); color: var(--primary);
+    text-align: left; padding: 10px; border: 1px solid var(--border);
+    position: absolute; z-index: 10; bottom: 150%; left: 50%; transform: translateX(-50%);
+    font-size: 13px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    pointer-events: none;
+}
+.day-cell.interactive:hover .tooltip { visibility: visible; }
+.tooltip-status { font-weight: bold; padding: 2px 6px; border-radius: 4px; color: white; margin-bottom: 5px; display: inline-block;}
+
+/* === Git 时间轴模式 === */
+.git-timeline { display: flex; flex-direction: column; border-left: 3px solid var(--border); margin-left: 20px; padding-left: 25px; margin-top: 20px;}
+.timeline-item { display: flex; align-items: flex-start; margin-bottom: 30px; position: relative; }
+.timeline-item::before { content: ""; position: absolute; left: -34px; top: 12px; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; border: 3px solid var(--bg);}
+.year-divider { position: relative; left: -45px; background: var(--tertiary); padding: 5px 15px; border-radius: 20px; font-weight: bold; margin: 20px 0; display: inline-block; border: 1px solid var(--border);}
+.date-label { min-width: 60px; font-weight: bold; color: var(--secondary); margin-right: 20px; line-height: 34px;}
+.log-content { background: var(--entry); padding: 12px 18px; border-radius: 8px; flex: 1; border: 1px solid var(--border); }
+.log-content p { margin: 5px 0 0 0; color: var(--content); font-size: 14px; line-height: 1.6; }
+.status-badge { font-size: 12px; padding: 3px 8px; border-radius: 12px; font-weight: bold; color: white;}
+</style>
+
+<div class="journal-container">
+    <div class="view-switches">
+        <button id="btn-calendar" class="active" onclick="switchView('calendar')">📅 日历</button>
+        <button id="btn-timeline" onclick="switchView('timeline')">🌿 时间轴</button>
+        <select id="year-select" onchange="changeYear(this.value)"></select>
+    </div>
+
+    <div id="calendar-view" class="view-section">
+        <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+
+    <div id="timeline-view" class="view-section hidden">
+        <div class="git-timeline">
+            {% set last_year = "" %}
+            {% for page in section.pages | reverse %}
+                {% set year = page.date | date(format="%Y") %}
+                {% set month = page.date | date(format="%m") %}
+                
+                {% if year != last_year %}
+                    <div class="year-divider">{{ year }} 年</div>
+                    {% set_global last_year = year %}
+                {% endif %}
+
+                {% if page.extra.logs %}
+                    {% for i in range(end=31) %}
+                        {% set day = 31 - i %}
+                        {% set day_str = day | as_str %}
+                        {% if page.extra.logs[day_str] %}
+                            {% set log = page.extra.logs[day_str] %}
+                            {% set badge_color = "var(--cal-work)" %}
+                            {% if log.status == "休息" %}{% set badge_color = "var(--cal-rest)" %}{% endif %}
+                            {% if log.status == "学习" %}{% set badge_color = "var(--cal-study)" %}{% endif %}
+                            <div class="timeline-item">
+                                <div class="date-label">{{ month }}-{% if day < 10 %}0{{ day }}{% else %}{{ day }}{% endif %}</div>
+                                <div class="log-content">
+                                    <span class="status-badge" style="background-color: {{ badge_color }};">{{ log.status }}</span>
+                                    <p>{{ log.content | safe }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// 获取 Zola 编译的原始数据
+const journalData = {
+    {% for page in section.pages %}
+    "{{ page.date | date(format='%Y-%m') }}": {{ page.extra.logs | default(value="{}") | json_encode() | safe }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+// 1. 自动提取有哪些年份 (如果没有数据，默认给个当前年份)
+const availableYears = [...new Set(Object.keys(journalData).map(k => k.split('-')[0]))].sort((a,b) => b - a);
+if(availableYears.length === 0) availableYears.push(new Date().getFullYear().toString());
+
+let currentYear = availableYears[0]; // 默认展示最新的年份
+
+// 2. 初始化年份下拉框
+function initYearSelect() {
+    const select = document.getElementById('year-select');
+    select.innerHTML = availableYears.map(y => `<option value="${y}">${y} 年</option>`).join('');
+    
+    // 如果只有1年，可以隐藏下拉框
+    // if(availableYears.length <= 1) select.style.display = 'none';
+}
+
+function changeYear(year) {
+    currentYear = year;
+    renderCalendar();
+}
+
+// 3. 渲染完美的矩阵日历
+function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    let html = '';
+    
+    for (let m = 1; m <= 12; m++) {
+        const monthStr = m.toString().padStart(2, '0');
+        const dataKey = `${currentYear}-${monthStr}`;
+        const monthLogs = journalData[dataKey] || {};
+
+        // 真实天数
+        const daysInMonth = new Date(currentYear, m, 0).getDate();
+        
+        // 核心魔法：算一下这月 1 号是周几，用来垫透明方块
+        const firstDayObj = new Date(currentYear, m - 1, 1);
+        let firstDayOfWeek = firstDayObj.getDay(); // 0 是周日，1-6 是周一到六
+        
+        // 转换为：周一前面垫0个，周二垫1个... 周日垫6个
+        let emptyPadding = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+
+        html += `<div class="month-block"><h3>${m} 月</h3>`;
+        html += `<div class="week-header"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>`;
+        html += `<div class="days-grid">`;
+
+        // 填充透明方块，保证 1 号落在正确的星期下面
+        for (let e = 0; e < emptyPadding; e++) {
+            html += `<div class="day-cell" style="background: transparent; cursor: default;"></div>`;
+        }
+
+        // 渲染真实的日子
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(currentYear, m - 1, d);
+            const dayOfWeek = dateObj.getDay(); 
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+            const log = monthLogs[d.toString()];
+            
+            let colorClass = isWeekend ? 'bg-empty-we' : 'bg-empty-wd';
+            let tooltipText = `${m}月${d}日<br>暂无记录`;
+
+            if (log) {
+                if (log.status === '工作') colorClass = 'bg-work';
+                else if (log.status === '休息') colorClass = 'bg-rest';
+                else if (log.status === '学习') colorClass = 'bg-study';
+
+                let badgeColor = colorClass === 'bg-work' ? 'var(--cal-work)' : (colorClass === 'bg-rest' ? 'var(--cal-rest)' : 'var(--cal-study)');
+                
+                tooltipText = `
+                    <div style="margin-bottom: 5px;">${currentYear}年${m}月${d}日</div>
+                    <span class="tooltip-status" style="background-color: ${badgeColor};">${log.status}</span>
+                    <br>${log.content}
+                `;
+            }
+
+            html += `
+                <div class="day-cell interactive ${colorClass}">
+                    <div class="tooltip">${tooltipText}</div>
+                </div>
+            `;
+        }
+        html += `</div></div>`;
+    }
+    grid.innerHTML = html;
+}
+
+function switchView(view) {
+    document.getElementById('calendar-view').classList.toggle('hidden', view !== 'calendar');
+    document.getElementById('timeline-view').classList.toggle('hidden', view !== 'timeline');
+    document.getElementById('btn-calendar').classList.toggle('active', view === 'calendar');
+    document.getElementById('btn-timeline').classList.toggle('active', view === 'timeline');
+    
+    // 如果切到时间轴，可以隐藏年份选择器（因为时间轴是展示所有年份的瀑布流）
+    document.getElementById('year-select').style.display = view === 'calendar' ? 'block' : 'none';
+}
+
+// 页面加载完毕后执行
+window.onload = () => {
+    initYearSelect();
+    renderCalendar();
+};
+</script>
+{% endblock main %}
