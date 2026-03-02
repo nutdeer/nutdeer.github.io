@@ -10,12 +10,6 @@
       </div>
       {% endif %}
       {% if config.extra.cela.show_post_meta | default(value=true) %}
-      <!-- <div class="post-meta">
-      {% include "partials/post/post_meta.html" %}
-      {% if config.extra.cela.show_post_edit_button %}
-          {% include "partials/post/post_edit.html" %}
-      {% endif %}
-      </div> -->
         <div class="post-meta">
                 {{ page.date | date(format="%Y 年 %-m 月 %-d 日") }} 
                 
@@ -38,7 +32,10 @@
   </header>
 
   {% if config.extra.cela.show_toc | default(value=true) %}
-  {% include "partials/post/post_toc.html" %}
+  <div class="toc-knob-wrapper">
+      <div class="toc-toggle-btn" id="toc-toggle" title="展开/收起目录"></div>
+      {% include "partials/post/post_toc.html" %}
+  </div>
   {% endif %}
 
   {% if page.content %}
@@ -52,49 +49,59 @@
     {% if config.extra.cela.show_post_nav_links | default(value=true) %}
     {% include "partials/post/post_nav_links.html" %}
     {% endif %}
-    {# TODO #}
-    {#- if (and site.Params.ShowShareButtons (ne .Params.disableShare true)) }}
-    {{- partial "share_icons.html" . -}}
-    {{- end #}
   </footer>
 
 </article>
 
 <style>
-/* === 修正 1：右侧小标题（ToC）绝对定位与无滚动条 === */
+/* === 修正 1：右侧 "刻度旋钮" 目录样式 === */
 @media screen and (min-width: 1200px) {
-    /* 关键：给整个文章容器加上相对定位，这样 ToC 才能以它为基准对齐！ */
-    .post-single { 
-        position: relative; 
+    .post-single { position: relative; }
+
+    .toc-knob-wrapper {
+        position: fixed !important;
+        top: 60% !important; 
+        transform: translateY(-50%) !important;
+        left: calc(50% + 380px) !important;
+        display: flex;
+        align-items: center; 
+        gap: 15px; 
+        z-index: 99;
     }
+
+    .toc-toggle-btn {
+        width: 14px; height: 14px;
+        border: 2px solid #8ba89a !important; 
+        border-radius: 50%; cursor: pointer;
+        background-color: transparent; transition: all 0.3s ease; flex-shrink: 0;
+        outline: none !important; user-select: none !important; -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .toc-toggle-btn:hover { background-color: rgba(163, 184, 173, 0.3); transform: scale(1.2); }
+    .toc-toggle-btn.expanded { background-color: #6b8a7c !important; border-color: #6b8a7c !important; }
 
     .toc {
-        /* absolute 会让目录依附于 .post-single，随着你往下读，它也会自然往上滚走 */
-        position: absolute !important; 
-        
-        /* 【垂直高度调整】：0px 代表与正文的绝对最顶部齐平。想往下挪就改成 50px、100px */
-        top: 0px !important; 
-        
-        /* 【水平位置调整】：50% 是文章中心，+380px 是往右挪到空白处。觉得太远可以改成 +350px */
-        left: calc(50% + 380px) !important; 
-        
+        position: relative !important;
         width: 250px !important;
+        max-height: 35vh !important; overflow-y: auto !important; 
+        overscroll-behavior: contain !important; 
         
-        /* 彻底干掉滚动条，让它全部展开 */
-        max-height: none !important;
-        overflow: visible !important; 
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
         
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        box-shadow: none !important;
+        background: transparent !important; border: none !important; padding: 20px 0 !important; box-shadow: none !important;
+        transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), -webkit-mask-image 0.5s ease;
     }
 
-    /* 隐藏所有残余的浏览器滚动条 */
+    .toc.expanded-mode {
+        max-height: 80vh !important; 
+        -webkit-mask-image: linear-gradient(to bottom, black 0%, black 100%);
+        mask-image: linear-gradient(to bottom, black 0%, black 100%);
+    }
+
     .toc::-webkit-scrollbar { display: none !important; }
     .toc { -ms-overflow-style: none !important; scrollbar-width: none !important; }
 
-    /* 保留你喜欢的抹茶色交互效果 */
     .toc-sticky { border-left: 2px solid var(--border); padding-left: 15px; }
     .toc-item a, .toc-item-child a {
         cursor: pointer !important; box-shadow: none !important; border-bottom: 1px solid transparent !important;
@@ -104,101 +111,145 @@
     .toc-item-child a { font-weight: 400 !important; color: var(--secondary) !important; opacity: 0.6; font-size: 0.8rem !important; padding-left: 12px; }
     .toc-item a:hover, .toc-item-child a:hover { color: #7a9387 !important; opacity: 1; transform: translateX(2px); border-bottom: 1px solid #8ba89a !important; }
 }
-@media screen and (max-width: 1199px) { .toc { display: none !important; } }
 
-/* === 1. Lilian Weng 风格标签框 === */
-.post-tags {
-    margin: 11px 0 -14px 0 !important; /* 调整和上面日期、下面正文的间距 */
-    padding: 0;
-    list-style: none;
-    display: flex;
-    gap: 10px; /* 标签之间的间距 */
-    flex-wrap: wrap;
-}
-.post-tags li a {
-    display: inline-flex !important; 
-    align-items: center !important;
-    justify-content: center !important;   /* 确保水平也绝对居中 */
-    line-height: normal !important;       /* 恢复正常的行高 */
-    padding: 4px 12px !important;         /* 上下 padding 改小一点点，因为行高恢复了 */
-    
-    background-color: #e1e4e8 !important; 
-    border: 1px solid #e1e4e8 !important; 
-    color: #586069 !important;            
-    border-radius: 4px !important;        
-    font-size: 13px !important;
-    text-decoration: none !important;
-    transition: all 0.2s ease !important;
-}
-.post-tags li a:hover {
-    background-color: #e1e4e8 !important;
-    border-color: #d1d5da !important;
-    color: #24292e !important;
-}
+@media screen and (max-width: 1199px) { .toc-knob-wrapper, .toc { display: none !important; } }
 
-/* 夜间模式稍微反转一下颜色，避免亮瞎眼 */
-body.dark .post-tags li a {
-    background-color: #24292e !important;
-    border-color: #444d56 !important;
-    color: #d1d5da !important;
-}
+/* === 1. 标签框样式 === */
+.post-tags { margin: 11px 0 -14px 0 !important; padding: 0; list-style: none; display: flex; gap: 10px; flex-wrap: wrap; }
+.post-tags li a { display: inline-flex !important; align-items: center !important; justify-content: center !important; line-height: normal !important; padding: 4px 12px !important; background-color: #e1e4e8 !important; border: 1px solid #e1e4e8 !important; color: #586069 !important; border-radius: 4px !important; font-size: 13px !important; text-decoration: none !important; transition: all 0.2s ease !important; }
+.post-tags li a:hover { background-color: #e1e4e8 !important; border-color: #d1d5da !important; color: #24292e !important; }
+body.dark .post-tags li a { background-color: #24292e !important; border-color: #444d56 !important; color: #d1d5da !important; }
 
-/* === 2. 底部上下篇导航样式：紧凑自适应版 === */
-.paginav {
-    display: flex;
-    /* 改为靠两端对齐，但子元素不再强制平分宽度 */
-    justify-content: space-between; 
-    margin: 20px 0 !important;
-    padding: 0 !important;
-    border-top: 1px solid var(--border);
-    background: transparent !important;
-}
-
-/* 核心：宽度自适应，设置最大宽度防止文字太长撑满整行 */
-.paginav a {
-    display: flex;
-    flex-direction: column;
-    padding: 12px 18px !important; /* 稍微缩减内边距，更显精致 */
-    text-decoration: none !important;
-    border-radius: 8px;
-    transition: background 0.3s ease; /* 移除 transform 过渡 */
-    
-    /* 关键：让宽度随内容变化，同时限制最大宽度 */
-    max-width: 45%; 
-    flex: 0 1 auto; 
-}
-
-/* 占位符也需要保持自适应 */
-.empty-nav {
-    flex: 0 1 auto;
-    width: 0; 
-}
-
-/* 交互：取消上浮效果，只保留背景变色 */
-.paginav a:hover {
-    background-color: var(--border) !important;
-    /* 已删除 transform: translateY(-2px) */
-}
-
+/* === 2. 底部导航样式 === */
+.paginav { display: flex; justify-content: space-between; margin: 20px 0 !important; padding: 0 !important; border-top: 1px solid var(--border); background: transparent !important; }
+.paginav a { display: flex; flex-direction: column; padding: 12px 18px !important; text-decoration: none !important; border-radius: 8px; transition: background 0.3s ease; max-width: 45%; flex: 0 1 auto; }
+.empty-nav { flex: 0 1 auto; width: 0; }
+.paginav a:hover { background-color: var(--border) !important; }
 .paginav a.prev { align-items: flex-start; text-align: left; }
 .paginav a.next { align-items: flex-end; text-align: right; }
-
-.paginav .nav-label {
-    font-size: 13px;
-    color: #888 !important;
-    margin-bottom: 4px;
-    font-weight: bold;
-}
-
-.paginav .nav-title {
-    font-size: 15px; /* 稍微调小一点点，视觉上更紧凑 */
-    color: var(--primary) !important;
-    font-weight: 600;
-    line-height: 1.4;
-    /* 允许长文字换行 */
-    word-break: break-word;
-}
-
+.paginav .nav-label { font-size: 13px; color: #888 !important; margin-bottom: 4px; font-weight: bold; }
+.paginav .nav-title { font-size: 15px; color: var(--primary) !important; font-weight: 600; line-height: 1.4; word-break: break-word; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toc = document.querySelector('.toc');
+    const content = document.querySelector('.post-content');
+    const toggleBtn = document.getElementById('toc-toggle');
+    
+    if (!toc || !content) return;
+
+    // 1. 小圆圈展开/收起逻辑
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault(); 
+            toc.classList.toggle('expanded-mode');
+            toggleBtn.classList.toggle('expanded');
+            toggleBtn.blur(); 
+        });
+    }
+
+    // --- 核心优化：分离式浏览与阻尼追赶 ---
+    let currentTocScroll = 0;
+    let isTocDetached = false;      // 是否进入“手动浏览模式”（停止自动同步）
+    let isActivelyScrollingToc = false; // 用户是否正把手放在目录上
+    let tocScrollTimeout;
+
+    // 当用户手动滑动目录时触发
+    const handleTocManualScroll = () => {
+        isTocDetached = true;         // 标记为脱离同步
+        isActivelyScrollingToc = true; // 锁定状态，防止左侧偶然滑动干扰
+        
+        clearTimeout(tocScrollTimeout);
+        // 停止接触 500ms 后，解除接触锁定。
+        // 注意：此时 isTocDetached 依然是 true，所以目录会安静地停在这里。
+        tocScrollTimeout = setTimeout(() => {
+            isActivelyScrollingToc = false;
+        }, 500); 
+    };
+
+    // 监听目录的滚动行为（滚轮、触摸、拖拽）
+    toc.addEventListener('wheel', handleTocManualScroll, { passive: true });
+    toc.addEventListener('touchmove', handleTocManualScroll, { passive: true });
+    toc.addEventListener('mousedown', handleTocManualScroll, { passive: true });
+
+    // 监听主窗口（正文）滚动
+    window.addEventListener('scroll', () => {
+        // 只有当用户彻底松开右侧目录时，左侧的滚动才会触发“重新同步”
+        if (!isActivelyScrollingToc) {
+            isTocDetached = false; 
+        }
+    });
+
+    // 计算根据正文进度，目录"应该"在的位置
+    const calculateTargetScroll = () => {
+        const rect = content.getBoundingClientRect();
+        const centerOffset = (window.innerHeight / 2) - rect.top; 
+        let percentage = centerOffset / rect.height;
+        percentage = Math.max(0, Math.min(1, percentage));
+
+        const maxScroll = toc.scrollHeight - toc.clientHeight;
+        return maxScroll > 0 ? maxScroll * percentage : 0;
+    };
+
+    // 渲染循环（实现丝滑动画）
+    const smoothSyncLoop = () => {
+        if (!toc.classList.contains('expanded-mode')) {
+            if (isTocDetached || isActivelyScrollingToc) {
+                // 【浏览模式】：什么都不做，让它停在用户翻到的地方。
+                // 持续记录当前位置，这样一会恢复同步时，就不会闪烁。
+                currentTocScroll = toc.scrollTop; 
+            } else {
+                // 【同步模式】：计算目标位置，缓慢追赶过去
+                let targetTocScroll = calculateTargetScroll();
+                
+                // 阻尼插值：数字从 0.08 改到了 0.04，让目录“追赶”左侧的速度变得非常非常慢且柔和
+                currentTocScroll += (targetTocScroll - currentTocScroll) * 0.04;
+                
+                // 只有差值足够大时才实际操作DOM，节省性能
+                if (Math.abs(targetTocScroll - currentTocScroll) > 0.5) {
+                    toc.scrollTop = currentTocScroll;
+                }
+            }
+        } else {
+            currentTocScroll = toc.scrollTop;
+        }
+        
+        requestAnimationFrame(smoothSyncLoop); 
+    };
+    
+    // 启动动画循环
+    requestAnimationFrame(smoothSyncLoop);
+
+    // --- 点击目录链接双端同步移动 ---
+    const tocLinks = toc.querySelectorAll('a');
+    tocLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('#')) {
+                e.preventDefault(); 
+                
+                const targetId = href.substring(1);
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    // 点击后，立刻结束浏览模式，强制恢复同步
+                    isTocDetached = false; 
+                    isActivelyScrollingToc = false;
+                    clearTimeout(tocScrollTimeout);
+
+                    const targetRect = targetElement.getBoundingClientRect();
+                    const absoluteElementTop = targetRect.top + window.scrollY;
+                    
+                    window.scrollTo({
+                        top: absoluteElementTop - 80, 
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+    });
+});
+</script>
 
 {% endblock %}
