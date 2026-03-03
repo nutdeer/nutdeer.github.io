@@ -139,7 +139,7 @@ show_home_title = true
 home_title = "Hello, I'm NutDeer"
 # 列表头
 navigation = [
-  {path = "/", title = "Archive"},
+  {path = "/", title = "Tech"},
   {path = "/tags", title = "Tags"},
   {path = "/categories", title = "Categories"},
   {path = "/journal", title = "Journal"},
