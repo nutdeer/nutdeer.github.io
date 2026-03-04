@@ -1,16 +1,22 @@
 name: Deploy Zola site to Pages
+
 on:
   push:
-    branches: [ main ]  # 确保这里是你仓库的主分支名
+    branches: [ main ] # 只要你把代码推送到 main 分支就会触发
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - checkout:
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: true # 关键：这一步会拉取你的 Cela 主题
+
       - name: Build and deploy
         uses: shalzz/zola-deploy-action@master
         env:
+          # 生成的静态网页会放到 gh-pages 分支
           PAGES_BRANCH: gh-pages
           BUILD_DIR: public
           TOKEN: ${{ secrets.GITHUB_TOKEN }}

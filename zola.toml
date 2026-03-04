@@ -1,6 +1,6 @@
 # The base URL of the site; the only required configuration variable.
 # [Cela hint] just use your github repository url or personal website domain
-base_url = "https://edwardzcn-decade.github.io/cela"
+base_url = "https://nutdeer.github.io"
 
 # The site title and description; used in feeds by default.
 title = "NutD'Blog"
