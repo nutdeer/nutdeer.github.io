@@ -33,14 +33,18 @@
 
 /* 1. 当前所在板块文字样式 */
 #menu a.nav-link.active {
+    /* 强制覆盖主题底层残留的加粗，让字体保持原本的苗条！ */
+    font-weight: 400 !important; /* 锁死物理宽度，坚决不退让 */
     color: var(--primary) !important; 
     
     /* 核心魔法换成了 Text-Shadow：
        原理是用 0 模糊度的同色阴影，向右和向左各偏移极小的像素（0.3px），
        把文字硬生生“垫厚”，边缘极其清晰，且绝对不引发排版跳动。 */
     text-shadow: 
-        0.3px 0 0 var(--primary), 
-        -0.3px 0 0 var(--primary),
+        0.2px 0 0 var(--primary), 
+        -0.2px 0 0 var(--primary),
+        0 -0.4px 0 var(--primary);
+
 }
 
 /* 当前板块的 #8ba89a 颜色常驻下划线 */
@@ -93,4 +97,35 @@ a, button, #menu a, .logo-switches, .logo-switches button, .logo-switches span {
 .logo-switches button:focus,
 .logo-switches button:active {
     background-color: transparent !important;
+}
+
+/* 隐藏search的面包屑导航 */
+.breadcrumbs {
+    display: none !important;
+}
+
+/* ==========================================
+   Search 搜索页面排版调整
+   ========================================== */
+
+/* 让大标题居中 */
+.page-header h1, 
+.search-header h1 {
+    text-align: center !important;
+}
+
+/* 让搜索输入框和提示文字居中 */
+.search-container, 
+.search-form,
+.post-description {
+    text-align: center !important;
+    margin: 0 auto !important; 
+    display: block;
+}
+
+/* 如果你想让输入框里的光标和占位符（Placeholder）也居中，可以加上这个 */
+#searchInput, 
+.search-input {
+    text-align: center !important;
+    margin: 0 auto !important;
 }
