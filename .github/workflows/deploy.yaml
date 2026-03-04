@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       # 👇 修复了这里：使用正确、稳定的 Zola 安装方式
       - name: Install Zola
