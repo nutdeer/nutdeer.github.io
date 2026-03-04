@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main ]
 
-# 开启 GitHub Pages 官方的高级部署权限
 permissions:
   contents: read
   pages: write
@@ -21,13 +20,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: recursive # 确保完整拉取主题代码
+          submodules: recursive
 
-      # 使用官方原生构建，告别 Docker 报错
-      - name: Setup Zola
-        uses: getzola/setup-zola@v2
+      # 👇 修复了这里：使用正确、稳定的 Zola 安装方式
+      - name: Install Zola
+        uses: taiki-e/install-action@v2
         with:
-          zola-version: '0.19.2' 
+          tool: zola@0.19.2
 
       - name: Build site
         run: zola build
