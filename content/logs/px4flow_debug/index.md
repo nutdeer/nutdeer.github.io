@@ -10,7 +10,13 @@ integrated_x 本身很难观察，所以观察累计值
 
 <!--more-->
 
-安装光流后发现 **x-y轴** 定不准，使用下面的文件获得累加的 **integrated_x** 和 **integrated_y** 。
+安装光流后发现 **x-y轴** 定不准，使用下面的文件获得累加的 **integrated_x** 和 **integrated_y** 。自己电脑连接飞控之后
+
+```c
+ls /dev/ttyACM* /dev/ttyUSB*
+```
+
+确认一下连飞控的端口号，我的是 `/dev/ttyACM0 `； 如果一直显示 `等待心跳包 `就先开一下 QGC 连接飞控，连接上了之后关闭QGC再运行代码就能用了
 
 *flow_check.py*
 
