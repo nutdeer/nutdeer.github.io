@@ -2,7 +2,8 @@
 title = "PX4光流水平轴数据验证"
 date = 2026-03-12
 description = ""
-[taxonomies] tags = ["硬件"]
+[taxonomies]
+tags = ["硬件"]
 +++
 
 integrated_x 本身很难观察，所以观察累计值
