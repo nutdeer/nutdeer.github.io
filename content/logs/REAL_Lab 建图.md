@@ -14,12 +14,18 @@ tags = ["SLAM","无人机"]
 
 ## 建图
 
-### 采集数据
+下面操作二选一
+
+### 采集数据并建图
 
 运行fastlio之后
-`rosbag record all`
+`rosbag record -a`
 
-### 建图
+播放 bag 包同时 `roslaunch fast_lio mapping_mid360.launch`
+
+播放完 `ctrl+c` 就保存了
+
+### 直接建图
 
 先检查打开建图没
 
@@ -33,9 +39,7 @@ rosed fast_lio mapping_mid360.launch
 pcd_save_en: true
 ```
 
-播放 bag 包同时 `roslaunch fast_lio mapping_mid360.launch`
-
-播放完 `ctrl+c` 就保存了
+会保存在
 
 ## 仿真
 
