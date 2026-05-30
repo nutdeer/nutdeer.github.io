@@ -55,7 +55,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 body {
   font-family: var(--text-font);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.6;
   word-break: break-word;
   background: var(--theme);
