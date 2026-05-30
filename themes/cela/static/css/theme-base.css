@@ -9,8 +9,23 @@
   --header-height: 60px;
   --footer-height: 60px;
   --radius: 8px;
-  /* --theme: var(--ctp-latte-mantle); */
-  --theme: #f8f8f8;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --comment: #b2b2b2;
+  --keyword: #846bd0;
+  --type: #2f80ed;
+  --builtin-type: #55b494;
+  --function: #7eb233;
+  --string: #a65085;
+  --docstring: #a65085;
+  --number: #d97706;
+  --punct: #6b7280;
+  --bracket: #4e76b5;
+  --angle: #0991b6;
+  --operator: #2c92b6;
+  --decorator: #567bb8;
+  --selection: #aed4fb;
+  --theme: #ffffff;
   --entry: rgb(255, 255, 255);
   /* --entry: var(--ctp-latte-base); */
   --primary: rgb(30, 30, 30);
@@ -19,9 +34,8 @@
   --secondary: var(--ctp-latte-subtext1);
   --tertiary: var(--ctp-latte-surface0);
   --content: var(--ctp-latte-text);     /* too light */
-  --hljs-bg: var(--ctp-latte-crust);
-  /* --code-bg: var(--ctp-latte-crust); */
-  --code-bg: #f8f8f8;
+  --hljs-bg: var(--bg);
+  --code-bg: var(--bg);
   --border: var(--ctp-latte-mantle);
 }
 *,

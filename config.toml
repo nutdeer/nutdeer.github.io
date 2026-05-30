@@ -93,9 +93,7 @@ build_search_index = true
 # Configuration of the Markdown rendering
 [markdown]
 # Whether to do syntax highlighting
-# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
-# 更新后没这个参数
-# highlight_code = true
+# Theme can be customised by setting the `theme` variable to a theme supported by Zola
 
 # When set to "true", emoji aliases translated to their corresponding
 # Unicode emoji equivalent in the rendered Markdown files. (e.g.: :smile: => 😄)
@@ -109,6 +107,10 @@ smart_punctuation = false
 # Default to open
 # Reference [Github Docs](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#footnotes)
 bottom_footnotes = true
+
+[markdown.highlighting]
+theme = "catppuccin-mocha"
+style = "class"
 
 [slugify]
 # default is on
@@ -214,7 +216,7 @@ search_description = "按标题或正文查找"
 
 [extra.cela.color]
 
-default_theme = "dark"
+default_theme = "light"
 # If disable javascript, the website will always use the default_theme
 remember_choice = true
 # If remeber_choice is true, the cookie/localStorage will use the theme last time user visited
