@@ -93,6 +93,57 @@ a, button, #menu a, .logo-switches, .logo-switches button, .logo-switches span {
     background-color: transparent !important; /* 防止主题自带的点击背景色浮现 */
 }
 
+@media screen and (max-width: 640px) {
+    .header .nav,
+    .nav {
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    #menu {
+        width: 100%;
+        justify-content: space-between;
+        overflow-x: visible !important;
+        gap: 8px;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    #menu li + li {
+        margin-inline-start: 0 !important;
+    }
+
+    #menu a,
+    #menu a.nav-link {
+        margin: 0 !important;
+        font-size: 14px !important;
+    }
+
+    #menu a.nav-link.active span::after,
+    #menu a.nav-link:not(.active):hover span::after {
+        height: 2px;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    .header .nav,
+    .nav {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    #menu {
+        gap: 6px;
+    }
+
+    #menu a,
+    #menu a.nav-link {
+        font-size: 13px !important;
+    }
+}
+
 /* 4. 针对小月亮右侧的 "|" 符号区域，防止点击背景变色 */
 .logo-switches button:focus,
 .logo-switches button:active {
@@ -161,3 +212,49 @@ a, button, #menu a, .logo-switches, .logo-switches button, .logo-switches span {
 }
 
 /* 1. 打破主题自带的大盒子“最小高度”限制 */
+
+@media screen and (max-width: 640px) {
+    .main {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+    }
+
+    .post-content {
+        font-size: 17px;
+        line-height: 1.55;
+    }
+
+    .post-content dl,
+    .post-content ol,
+    .post-content p,
+    .post-content figure,
+    .post-content ul {
+        margin-bottom: 16px;
+    }
+
+    .post-content h1 {
+        font-size: 32px;
+        margin: 32px auto 22px;
+    }
+
+    .post-content h2 {
+        font-size: 26px;
+        margin: 28px auto 18px;
+    }
+
+    .post-content h3 {
+        font-size: 21px;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    .main {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    .post-content {
+        font-size: 16px;
+        line-height: 1.52;
+    }
+}
