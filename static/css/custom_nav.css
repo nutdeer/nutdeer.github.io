@@ -213,6 +213,23 @@ a, button, #menu a, .logo-switches, .logo-switches button, .logo-switches span {
 
 /* 1. 打破主题自带的大盒子“最小高度”限制 */
 
+.logs-header {
+    margin-top: 40px !important;
+    margin-bottom: 40px !important;
+    text-align: right;
+}
+
+.logs-header h1 {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.logs-header p {
+    color: var(--secondary);
+    font-size: 15px;
+    margin-top: 8px;
+}
+
 @media screen and (max-width: 640px) {
     .main {
         padding-left: 18px !important;

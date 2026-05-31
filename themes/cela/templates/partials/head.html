@@ -2,7 +2,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
-<title>{% if page.title %}{{ page.title }}{% elif section.title %}{{ section.title }}{% else %}{{ config.title }}{% endif %}</title>
+<title>{% if page.title %}{{ page.title }}{% elif section.title %}{{ section.title }}{% elif taxonomy.name %}{{ taxonomy.name | replace(from="_", to=" ") | title }}{% elif term.name %}{{ term.name }}{% else %}{{ config.title }}{% endif %}</title>
 
 
 {# Only for post page #}
@@ -12,7 +12,7 @@
 {% elif page.keywords %}
 <meta name="keywords" content="{{ page.keywords | join(sep=', ') }}">
 {% else %}
-<meta name="keywords" content="{{ config.extra.cela.default_keywords | default(value=["Rust zola blog", "Theme cela"]) | join(sep=', ') }}">
+<meta name="keywords" content="{{ config.extra.cela.default_keywords | default(value=["NutDeer", "无人机", "工程笔记"]) | join(sep=', ') }}">
 {% endif %}
 
 
@@ -106,4 +106,3 @@
 </noscript>
 
 {% include "partials/extend_head.html" %}
-

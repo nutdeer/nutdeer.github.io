@@ -11,12 +11,12 @@
 
 
 
-<meta name="keywords" content="Rust zola blog, cela theme">
+<meta name="keywords" content="无人机, 自主规划, PX4, Linux, Zola, 工程笔记">
 
 
 
 
-<meta name="description" content="小型故障排除笔记与紧凑修复方案">
+<meta name="description" content="小故障记录与小方案">
 
 
 
@@ -167,7 +167,6 @@
 .date-label { min-width: 60px; font-weight: bold; color: var(--secondary); margin-right: 20px; }
 .log-content { background: var(--entry); padding: 10px 15px; border-radius: 6px; flex: 1; }
 </style>
-
 </head>
 
 <body
@@ -389,12 +388,13 @@ class="list" id="top">
 </header>
 
 <link rel="stylesheet" href="https://nutdeer.github.io/css/custom_nav.css">
+
 <main class="main">
   
 <header class="page-header fixes-header">
   <h1>Fixes</h1>
   
-  <p>小型故障排除笔记与紧凑修复方案</p>
+  <p>小故障记录与小方案</p>
   
 </header>
 
@@ -406,12 +406,22 @@ class="list" id="top">
 <div class="fixes-list">
   
   
+  <article class="fix-entry" data-search="测试 **试验下加粗**嘻嘻">
+    <div class="fix-main">
+      <div class="fix-title">测试</div>
+      <div class="fix-content"><strong>试验下加粗</strong>嘻嘻</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
   <article class="fix-entry" data-search="zola 主页卡片显示正文开头而不是 description 现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。
 原因：主页列表模板使用了 page.summary。
 处理：列表摘要改成 page.description | default(value=page.summary)。">
     <div class="fix-main">
       <div class="fix-title">Zola 主页卡片显示正文开头而不是 description</div>
-      <div class="fix-content">现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。<br>原因：主页列表模板使用了 page.summary。<br>处理：列表摘要改成 page.description | default(value=page.summary)。</div>
+      <div class="fix-content">现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。
+原因：主页列表模板使用了 page.summary。
+处理：列表摘要改成 page.description | default(value=page.summary)。</div>
     </div>
     <span class="fix-date">2026-05-31</span>
   </article>
@@ -421,7 +431,9 @@ class="list" id="top">
 备注：优先检查端口号，例如 &#x2F;dev&#x2F;ttyacm0。">
     <div class="fix-main">
       <div class="fix-title">QGC 连接后脚本才收到 PX4 心跳</div>
-      <div class="fix-content">现象：运行 flow_check.py 后一直显示等待心跳包。<br>处理：先打开 QGC 连接飞控，确认能正常读取数据后关闭 QGC，再运行脚本。<br>备注：优先检查端口号，例如 /dev/ttyACM0。</div>
+      <div class="fix-content">现象：运行 flow_check.py 后一直显示等待心跳包。
+处理：先打开 QGC 连接飞控，确认能正常读取数据后关闭 QGC，再运行脚本。
+备注：优先检查端口号，例如 /dev/ttyACM0。</div>
     </div>
     <span class="fix-date">2026-05-31</span>
   </article>
@@ -500,6 +512,10 @@ class="list" id="top">
   color: var(--secondary);
   font-size: 14px;
   line-height: 1.7;
+}
+.fix-content strong {
+  color: var(--primary);
+  font-weight: 700;
 }
 .fix-date {
   color: var(--secondary);

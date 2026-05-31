@@ -59,7 +59,7 @@
 }
 .archive-count,
 .archive-meta {
-  color: var(--primary);
+  color: #2b4f3f;
   font-size: 14px;
 }
 .footer,
@@ -107,7 +107,7 @@
 }
 .footer a:hover,
 .top-link:hover {
-  color: var(--primary);
+  color: #2b4f3f;
 }
 .top-link:focus,
 #theme-toggle:focus {
@@ -692,10 +692,17 @@ a.section-count:hover {
 .post-footer {
   margin-top: 56px;
 }
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 11px 0 -14px;
+  padding: 0;
+  list-style: none;
+}
 .post-tags li {
   display: inline-flex;
-  margin-inline-end: 5px;
-  margin-bottom: 6px;
+  margin: 0;
 }
 .post-tags a,
 .share-buttons,
@@ -710,7 +717,7 @@ a.section-count:hover {
   justify-content: center;
   min-height: 28px;
   padding: 0 11px;
-  color: #6b8a7c;
+  color: #2b4f3f;
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -721,7 +728,7 @@ a.section-count:hover {
 }
 .post-tags a:hover,
 .paginav a:hover {
-  color: #4f6f60;
+  color: #2b4f3f;
   background: rgba(139, 168, 154, 0.16);
   border-color: rgba(139, 168, 154, 0.28);
 }
@@ -973,7 +980,7 @@ input {
   justify-content: center;
   min-height: 34px;
   padding: 0 13px;
-  color: #6b8a7c;
+  color: #2b4f3f;
   font-size: 15px;
   font-weight: 500;
   line-height: 1;
@@ -991,7 +998,7 @@ input {
   vertical-align: middle;
 }
 .terms-tags a:hover {
-  color: #4f6f60;
+  color: #2b4f3f;
   background: rgba(139, 168, 154, 0.16);
   border-color: rgba(139, 168, 154, 0.28);
 }

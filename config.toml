@@ -4,7 +4,7 @@ base_url = "https://nutdeer.github.io"
 
 # The site title and description; used in feeds by default.
 title = "NutD'Blog"
-description = "A light weight theme for zola"
+description = "无人机自主规划、Linux、PX4 与个人工程笔记"
 
 # The default author for pages
 author = "nutdeer"
@@ -133,11 +133,11 @@ enable_mathjax = false
 
 [extra.cela]
 # The template title (shown in home page )
-default_keywords = ["Rust zola blog", "cela theme"]
+default_keywords = ["无人机", "自主规划", "PX4", "Linux", "Zola", "工程笔记"]
 favicon = "favicon.ico"
 favicon16x16 = "favicon-16x16.png"
 favicon32x32 = "favicon-32x32.png"
-header_title = "Hello,<br>I'm ZWX"
+header_title = "Hello,<br>I'm NutDeer"
 icon = "svg/cela_new_small_rec.svg"
 icon_dark = "svg/cela_new_small_rec.svg"
 
@@ -170,11 +170,7 @@ home_list_style = "default"
 
 show_home_social_icons = false
 social_icons = [
-  {path = "https://github.com/", title = "GitHub", icon = "github"},
-  {path = "https://scholar.google.com/", title = "Google Scholar", icon = "googlescholar"},
-  {path = "https://sg.linkedin.com/", title = "Linkedin", icon = "linkedin"},
-  {path = "xxx@gmail.com", title = "Email", icon = "email"},
-  {path = "https://www.wikipedia.org", title = "Wiki", icon = "wiki"},
+  {path = "https://github.com/nutdeer", title = "GitHub", icon = "github"},
   {path = "/atom.xml", title = "RSS", icon = "rss"},
 ]
 taxonomies_desc = []
@@ -188,13 +184,7 @@ taxonomies_tail = [
   {name = "categories", emoji = "📂"},
 ]
 
-# Trigger when readers click the "suggest changes" on each page
-# it can be
-# - an email address (e.g. "mailto:edward@edwardzcn.me" )
-# - a github or gitlab repo link (e.g. "https://github.com/<your-username>/<your-source>/tree/main")
-# if your blog source is public, cela will try to find the orinal page with its relative path
-# edit_post_url = "mailto:your-username@gmail.com"
-edit_post_url = "https://github.com/your-username/your-source/tree/main"
+edit_post_url = "https://github.com/nutdeer/nutdeer.github.io/tree/main"
 show_cela_logo = true
 show_code_copy_buttons = true
 show_header_title = false
