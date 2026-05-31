@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" dir="i18n_dir">
+
+<head>
+  <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Fixes</title>
+
+
+
+
+<meta name="keywords" content="Rust zola blog, cela theme">
+
+
+
+
+<meta name="description" content="Small troubleshooting notes and compact fixes.">
+
+
+
+<meta name="author" content="nutdeer">
+
+
+
+
+
+
+
+  
+  <link rel="canonical" href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;&#x2F;fixes&#x2F;">
+
+
+<link rel="stylesheet" href="https://nutdeer.github.io/css/theme-vars.css">
+<link rel="stylesheet" href="https://nutdeer.github.io/css/theme-base.css">
+<link rel="stylesheet" href="https://nutdeer.github.io/css/theme-common.css">
+<link rel="icon" href="https://nutdeer.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://nutdeer.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://nutdeer.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://nutdeer.github.io/apple-touch-icon.png">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+
+
+
+<link rel="alternate" type="application/atom+xml" title="RSS" href="https://nutdeer.github.io/atom.xml">
+
+
+
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+    </style>
+    
+</noscript>
+
+
+
+<style>
+    /* 导航栏整体设置 */
+    .header {
+        position: relative !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 1;
+    }
+
+    .header .nav {
+        justify-content: flex-end !important;
+        padding-top: 0px; /* 调整这个值可以改变右侧菜单的高度 */
+        padding-bottom: 20px;
+    }
+
+    /* 修复左侧悬浮 Logo 的对齐和位置 */
+    .logo {
+        position: fixed !important;
+        /* 【关键：垂直对齐】 */
+        /* 如果觉得 NutD'Blog 还是偏低，把 top 从 20px 改成 18px 或 16px */
+        top: 15px; 
+        
+        /* 【关键：水平位置】往左挪，减小 500px 后面的负偏移量即可 */
+        /* 比如原来是 -40px，现在改成 -80px 会更靠左 */
+        left: max(10px, calc(50% - 500px - 60px)); 
+
+        display: flex !important;
+        align-items: center !important; /* 强制内部元素垂直居中对齐 */
+        gap: 4px; /* Logo文字和月亮之间的间距 */
+        
+        z-index: 1001;
+        background: var(--bg); /* 确保背景遮挡滚动文字 */
+        padding: 4px 12px;
+        border-radius: 4px;
+    }
+
+    /* 确保右侧菜单也垂直居中 */
+    #menu {
+        display: flex;
+        align-items: center;
+        margin-left: auto !important;
+    }
+
+    #menu li {
+        display: flex;
+        align-items: center;
+    }
+
+    /* 响应式：窗口太小时隐藏左侧悬浮 */
+    @media screen and (max-width: 1150px) {
+        .logo {
+            display: none !important;
+        }
+    }
+</style>
+
+<style>
+/* 容器与切换按钮 */
+.journal-container { margin-top: 40px; }
+.view-switches { margin-bottom: 20px; display: flex; gap: 10px; }
+.hidden { display: none !important; }
+
+/* === 日历模式样式 === */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+.month-block { border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+.days-flex { display: flex; flex-wrap: wrap; gap: 4px; }
+.day-cell {
+    width: 12px; height: 12px; background: var(--tertiary); 
+    position: relative; cursor: pointer; border-radius: 2px;
+}
+.day-cell:hover { background: var(--primary); }
+/* 悬浮文字提示 */
+.tooltip {
+    visibility: hidden; width: 150px; background: var(--theme); color: var(--primary);
+    text-align: left; padding: 8px; border: 1px solid var(--border);
+    position: absolute; z-index: 10; bottom: 125%; left: 50%; transform: translateX(-50%);
+    font-size: 12px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.day-cell:hover .tooltip { visibility: visible; }
+
+/* === Git 时间轴模式 (从下往上) === */
+.git-timeline {
+    display: flex;
+    flex-direction: column-reverse; /* 关键：强制从下往上排列 */
+    border-left: 2px solid var(--border);
+    margin-left: 50px;
+    padding-left: 20px;
+}
+.timeline-item {
+    display: flex; align-items: flex-start; margin-bottom: 20px; position: relative;
+}
+.timeline-item::before {
+    content: ""; position: absolute; left: -27px; top: 8px;
+    width: 12px; height: 12px; background: var(--primary); border-radius: 50%;
+}
+.year-box {
+    background: var(--primary); color: var(--theme); padding: 4px 8px;
+    font-weight: bold; border-radius: 4px; margin-right: 15px; min-width: 60px;
+}
+.date-label { min-width: 60px; font-weight: bold; color: var(--secondary); margin-right: 20px; }
+.log-content { background: var(--entry); padding: 10px 15px; border-radius: 6px; flex: 1; }
+</style>
+
+</head>
+
+<body
+class="list" id="top">
+  <script>
+    const preft = localStorage.getItem("pref-theme");
+    if (preft === "dark") {
+      document.body.classList.add("dark");
+    } else if (preft === "light") {
+      document.body.classList.remove("dark");
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      document.body.classList.add("dark");
+    } else {
+      document.body.classList.remove("dark");
+    }
+  </script>
+<header class="header">
+  <nav class="nav">
+<div class="logo">
+  <a href="https:&#x2F;&#x2F;nutdeer.github.io" accesskey="h" title="NutD'Blog" class="logo-link" style="display: flex; align-items: center;">
+    <!-- 移除了内联 color 样式，改由 CSS 控制 -->
+    <span class="logo-name" style="font-size: 22px; font-weight: bold; line-height: 1;">NutD'Blog</span>
+  </a>
+
+  <div class="logo-switches" style="display: flex; align-items: center; gap: 6px;">
+
+    <!-- 给按钮添加了 class="theme-toggle-btn" 以便 CSS 控制 -->
+    <button id="theme-toggle" class="theme-toggle-btn" accesskey="t" title="切换模式" style="display: flex; align-items: center; justify-content: center; border: none; background: none; padding: 0; margin: 0; cursor: pointer;">
+
+      <svg id="moon" style="transform: translateY(3px);" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      <svg id="sun" style="transform: translateY(3px);" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+
+    <span style="color: var(--tertiary); font-weight: 200; font-size: 18px; line-height: 1; position: relative; top: 2px;">|</span>
+  </div>
+</div>
+
+<style>
+  /* --- 新增：Logo 与主题切换按钮的悬停变色逻辑 --- */
+
+  /* 1. 网站标题 (NutD'Blog) */
+  .logo-name {
+    color: var(--primary); /* 默认颜色保持原样 */
+    transition: color 0.3s ease; /* 添加 0.3秒 的平滑过渡 */
+  }
+  .logo-link:hover .logo-name {
+    color: #8ba89a; /* 悬停时变为指定颜色 */
+  }
+
+  /* 2. 主题切换按钮 (太阳/月亮图标) */
+  .theme-toggle-btn {
+    color: var(--primary); /* 图标默认颜色 */
+    transition: color 0.3s ease;
+  }
+  .theme-toggle-btn:hover {
+    color: #8ba89a; /* 悬停变色 */
+  }
+</style>
+
+
+    <ul id="menu">
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;" class="nav-link " title="Tech">
+          <span>Tech</span>
+        </a>
+      </li>
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;logs&#x2F;" class="nav-link " title="Logs">
+          <span>Logs</span>
+        </a>
+      </li>
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+                    
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;fixes&#x2F;" class="nav-link active" title="Fixes">
+          <span>Fixes</span>
+        </a>
+      </li>
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;notes&#x2F;" class="nav-link " title="Notes">
+          <span>Notes</span>
+        </a>
+      </li>
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;tags&#x2F;" class="nav-link " title="Tags">
+          <span>Tags</span>
+        </a>
+      </li>
+      
+        
+        
+          
+        
+        
+        
+        
+        
+            
+            
+            
+            
+            
+
+            
+                
+            
+        
+
+      <li>
+        <a href="https:&#x2F;&#x2F;nutdeer.github.io&#x2F;search&#x2F;" class="nav-link " title="Search">
+          <span>Search</span>
+        </a>
+      </li>
+      
+    </ul>
+    
+  </nav>
+
+</header>
+
+<link rel="stylesheet" href="https://nutdeer.github.io/css/custom_nav.css">
+<main class="main">
+  
+<header class="page-header fixes-header">
+  <h1>Fixes</h1>
+  
+  <p>Small troubleshooting notes and compact fixes.</p>
+  
+</header>
+
+<div class="fix-search">
+  <input id="fix-search-input" type="search" placeholder="Search fixes..." autocomplete="off">
+  <span id="fix-search-count"></span>
+</div>
+
+<div class="fixes-list">
+  
+  
+  <article class="fix-entry" data-search="中国测试王 中国测试王">
+    <div class="fix-main">
+      <div class="fix-title">中国测试王</div>
+      <div class="fix-content">中国测试王</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
+  <article class="fix-entry" data-search="我爱测试 测试呆呆的">
+    <div class="fix-main">
+      <div class="fix-title">我爱测试</div>
+      <div class="fix-content">测试呆呆的</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
+  <article class="fix-entry" data-search="测试代码测试测试 测试代码测试测试">
+    <div class="fix-main">
+      <div class="fix-title">测试代码测试测试</div>
+      <div class="fix-content">测试代码测试测试</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
+  <article class="fix-entry" data-search="zola 主页卡片显示正文开头而不是 description 现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。
+原因：主页列表模板使用了 page.summary。
+处理：列表摘要改成 page.description | default(value=page.summary)。">
+    <div class="fix-main">
+      <div class="fix-title">Zola 主页卡片显示正文开头而不是 description</div>
+      <div class="fix-content">现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。<br>原因：主页列表模板使用了 page.summary。<br>处理：列表摘要改成 page.description | default(value=page.summary)。</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
+  <article class="fix-entry" data-search="qgc 连接后脚本才收到 px4 心跳 现象：运行 flow_check.py 后一直显示等待心跳包。
+处理：先打开 qgc 连接飞控，确认能正常读取数据后关闭 qgc，再运行脚本。
+备注：优先检查端口号，例如 &#x2F;dev&#x2F;ttyacm0。">
+    <div class="fix-main">
+      <div class="fix-title">QGC 连接后脚本才收到 PX4 心跳</div>
+      <div class="fix-content">现象：运行 flow_check.py 后一直显示等待心跳包。<br>处理：先打开 QGC 连接飞控，确认能正常读取数据后关闭 QGC，再运行脚本。<br>备注：优先检查端口号，例如 /dev/ttyACM0。</div>
+    </div>
+    <span class="fix-date">2026-05-31</span>
+  </article>
+  
+  
+</div>
+
+<style>
+.fixes-header {
+  margin-top: 40px;
+  margin-bottom: 24px;
+  text-align: right;
+}
+.fixes-header h1 {
+  font-size: 40px;
+  font-weight: 700;
+}
+.fixes-header p {
+  color: var(--secondary);
+  font-size: 15px;
+  margin-top: 8px;
+}
+.fix-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 20px;
+  max-width: var(--main-width);
+}
+.fix-search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 14px;
+  color: var(--primary);
+  background: var(--entry);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  outline: none;
+}
+.fix-search input:focus {
+  border-color: #8ba89a;
+}
+.fix-search span {
+  color: var(--secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.fixes-list {
+  max-width: var(--main-width);
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+.fix-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fix-entry.is-hidden {
+  display: none;
+}
+.fix-main {
+  display: grid;
+  gap: 8px;
+}
+.fix-title {
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.fix-content {
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.fix-date {
+  color: var(--secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media screen and (max-width: 640px) {
+  .fix-entry {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+</style>
+
+<script>
+const fixSearchInput = document.getElementById('fix-search-input');
+const fixSearchCount = document.getElementById('fix-search-count');
+const fixEntries = Array.from(document.querySelectorAll('.fix-entry'));
+
+function normalizeFixText(text) {
+  return (text || '').toLowerCase().trim();
+}
+
+function updateFixSearch() {
+  const query = normalizeFixText(fixSearchInput.value);
+  let visible = 0;
+
+  fixEntries.forEach((entry) => {
+    const haystack = entry.dataset.search || '';
+    const matched = !query || haystack.includes(query);
+    entry.classList.toggle('is-hidden', !matched);
+    if (matched) visible += 1;
+  });
+
+  fixSearchCount.textContent = query ? `${visible}/${fixEntries.length}` : `${fixEntries.length}`;
+}
+
+fixSearchInput.addEventListener('input', updateFixSearch);
+updateFixSearch();
+</script>
+
+</main>
+
+<footer class="footer">
+  
+  <span>&copy; 2026 <a href="https:&#x2F;&#x2F;nutdeer.github.io">nutdeer</a></span>
+  
+  <span>
+      Powered by
+      <a href="https://www.getzola.org/" rel="noopener noreferrer" target="_blank">Zola</a> &
+      <a href="https://github.com/edwardzcn-decade/cela" rel="noopener" target="_blank">Cela</a>
+  </span>
+</footer>
+
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+      <path d="M12 6H0l6-6z" />
+  </svg>
+</a>
+
+
+<script>
+  let menu = document.getElementById('menu')
+  if (menu) {
+      menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+      menu.onscroll = function () {
+          localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+      }
+  }
+
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          var id = this.getAttribute("href").substr(1);
+          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                  behavior: "smooth"
+              });
+          } else {
+              document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+          }
+          if (id === "top") {
+              history.replaceState(null, null, " ");
+          } else {
+              history.pushState(null, null, `#${id}`);
+          }
+      });
+  });
+
+</script>
+
+
+<script>
+  var mybutton = document.getElementById("top-link");
+  window.onscroll = function () {
+      if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+          mybutton.style.visibility = "visible";
+          mybutton.style.opacity = "1";
+      } else {
+          mybutton.style.visibility = "hidden";
+          mybutton.style.opacity = "0";
+      }
+  };
+
+</script>
+
+
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+      if (document.body.className.includes("dark")) {
+          document.body.classList.remove('dark');
+          localStorage.setItem("pref-theme", 'light');
+      } else {
+          document.body.classList.add('dark');
+          localStorage.setItem("pref-theme", 'dark');
+      }
+  })
+
+</script>
+
+
+<script>
+  document.querySelectorAll('pre > code').forEach((codeblock) => {
+      const container = codeblock.parentNode.parentNode;
+
+      const copybutton = document.createElement('button');
+      copybutton.classList.add('copy-code');
+      copybutton.innerText = 'copy';
+      function copyingDone() {
+          copybutton.innerText = 'copied!';
+          setTimeout(() => {
+              copybutton.innerText = 'copy';
+          }, 2000);
+      }
+
+      copybutton.addEventListener('click', (cb) => {
+          if ('clipboard' in navigator) {
+              var content = codeblock.textContent;
+              if(codeblock.firstChild.tagName == 'TABLE') {
+                  content = Array(...codeblock.firstChild.getElementsByTagName('span')).map((span) => { return span.textContent; }).join('');
+              }
+              navigator.clipboard.writeText(content);
+              copyingDone();
+              return;
+          }
+
+          const range = document.createRange();
+          range.selectNodeContents(codeblock);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          try {
+              document.execCommand('copy');
+              copyingDone();
+          } catch (e) { };
+          selection.removeRange(range);
+      });
+
+      if (container.classList.contains("highlight")) {
+          container.appendChild(copybutton);
+      } else if (container.parentNode.firstChild == container) {
+          // td containing LineNos
+      } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+          // table containing LineNos and code
+          codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+      } else {
+          // code blocks not having highlight as parent class
+          codeblock.parentNode.appendChild(copybutton);
+      }
+  });
+</script>
+
+
+
+
+
+
+
+
+<div id="search-toggle-box" class="hidden">
+  <div class="search-toggle-modal">
+    <input type="text" id="search-toggle-input" placeholder="Type to search..." />
+    <button id="search-toggle-button">Search</button>
+  </div>
+</div>
+
+
+
+<script src="https://nutdeer.github.io/js/toggle-sections.js"></script>
+
+
+</body>
+
+</html>

@@ -148,6 +148,7 @@ home_title = "Hello, I'm NutDeer"
 navigation = [
   {path = "/", title = "Tech"},
   {path = "/logs/", title = "Logs"},
+  {path = "/fixes/", title = "Fixes"},
   {path = "/notes/", title = "Notes"},
   {path = "/tags/", title = "Tags"},
   {path = "/search/", title = "Search"},
