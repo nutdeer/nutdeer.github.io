@@ -694,8 +694,8 @@ a.section-count:hover {
 }
 .post-tags li {
   display: inline-flex;
-  margin-inline-end: 6px;
-  margin-bottom: 8px;
+  margin-inline-end: 5px;
+  margin-bottom: 6px;
 }
 .post-tags a,
 .share-buttons,
@@ -710,19 +710,20 @@ a.section-count:hover {
   justify-content: center;
   min-height: 28px;
   padding: 0 11px;
-  color: #7a9387;
-  font-size: 13px;
-  font-weight: 600;
+  color: #6b8a7c;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1;
-  background: rgba(139, 168, 154, 0.1);
-  border-color: rgba(139, 168, 154, 0.42);
+  background: rgba(139, 168, 154, 0.08);
+  border-color: transparent;
+  border-radius: 999px;
   white-space: nowrap;
 }
 .post-tags a:hover,
 .paginav a:hover {
-  color: #6b8a7c;
-  background: rgba(139, 168, 154, 0.18);
-  border-color: #8ba89a;
+  color: #4f6f60;
+  background: rgba(139, 168, 154, 0.16);
+  border-color: rgba(139, 168, 154, 0.28);
 }
 .share-buttons {
   margin: 14px 0;
@@ -970,15 +971,15 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 12px;
-  color: #7a9387;
-  font-size: 14px;
-  font-weight: 600;
+  min-height: 34px;
+  padding: 0 13px;
+  color: #6b8a7c;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1;
-  background: rgba(139, 168, 154, 0.1);
-  border: 1px solid rgba(139, 168, 154, 0.42);
-  border-radius: var(--radius);
+  background: rgba(139, 168, 154, 0.08);
+  border: 1px solid transparent;
+  border-radius: 999px;
   transition: transform 0.1s, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   white-space: nowrap;
 }
@@ -990,9 +991,9 @@ input {
   vertical-align: middle;
 }
 .terms-tags a:hover {
-  color: #6b8a7c;
-  background: rgba(139, 168, 154, 0.18);
-  border-color: #8ba89a;
+  color: #4f6f60;
+  background: rgba(139, 168, 154, 0.16);
+  border-color: rgba(139, 168, 154, 0.28);
 }
 .terms-tags a:active {
   background: rgba(139, 168, 154, 0.22);

@@ -116,11 +116,11 @@
 @media screen and (max-width: 1199px) { .toc-knob-wrapper, .toc { display: none !important; } }
 
 /* === 1. 标签框样式 === */
-.post-tags { margin: 11px 0 -14px 0 !important; padding: 0; list-style: none; display: flex; gap: 8px; flex-wrap: wrap; }
+.post-tags { margin: 11px 0 -14px 0 !important; padding: 0; list-style: none; display: flex; gap: 7px; flex-wrap: wrap; }
 .post-tags li { display: inline-flex !important; margin: 0 !important; }
-.post-tags li a { display: inline-flex !important; align-items: center !important; justify-content: center !important; min-height: 28px !important; line-height: 1 !important; padding: 0 11px !important; background: rgba(139, 168, 154, 0.1) !important; border: 1px solid rgba(139, 168, 154, 0.42) !important; color: #7a9387 !important; border-radius: var(--radius) !important; font-size: 13px !important; font-weight: 600 !important; text-decoration: none !important; white-space: nowrap !important; transition: all 0.2s ease !important; }
-.post-tags li a:hover { background: rgba(139, 168, 154, 0.18) !important; border-color: #8ba89a !important; color: #6b8a7c !important; }
-body.dark .post-tags li a { background: rgba(139, 168, 154, 0.16) !important; border-color: rgba(139, 168, 154, 0.5) !important; color: #b7cabe !important; }
+.post-tags li a { display: inline-flex !important; align-items: center !important; justify-content: center !important; min-height: 28px !important; line-height: 1 !important; padding: 0 11px !important; background: rgba(139, 168, 154, 0.08) !important; border: 1px solid transparent !important; color: #6b8a7c !important; border-radius: 999px !important; font-size: 14px !important; font-weight: 500 !important; text-decoration: none !important; white-space: nowrap !important; transition: all 0.2s ease !important; }
+.post-tags li a:hover { background: rgba(139, 168, 154, 0.16) !important; border-color: rgba(139, 168, 154, 0.28) !important; color: #4f6f60 !important; }
+body.dark .post-tags li a { background: rgba(139, 168, 154, 0.14) !important; border-color: transparent !important; color: #b7cabe !important; }
 
 /* === 2. 底部导航样式 === */
 .paginav { display: flex; justify-content: space-between; margin: 20px 0 !important; padding: 0 !important; border-top: 1px solid var(--border); background: transparent !important; }
@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
             toc.classList.toggle('expanded-mode');
             toggleBtn.classList.toggle('expanded');
             toggleBtn.blur(); 
+            requestTocSync();
         });
     }
 
@@ -156,11 +157,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let isTocDetached = false;      // 是否进入“手动浏览模式”（停止自动同步）
     let isActivelyScrollingToc = false; // 用户是否正把手放在目录上
     let tocScrollTimeout;
+    let syncFrameId = null;
+
+    const requestTocSync = () => {
+        if (syncFrameId === null) {
+            syncFrameId = requestAnimationFrame(smoothSyncLoop);
+        }
+    };
 
     // 当用户手动滑动目录时触发
     const handleTocManualScroll = () => {
         isTocDetached = true;         // 标记为脱离同步
         isActivelyScrollingToc = true; // 锁定状态，防止左侧偶然滑动干扰
+        currentTocScroll = toc.scrollTop;
         
         clearTimeout(tocScrollTimeout);
         // 停止接触 500ms 后，解除接触锁定。
@@ -180,8 +189,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // 只有当用户彻底松开右侧目录时，左侧的滚动才会触发“重新同步”
         if (!isActivelyScrollingToc) {
             isTocDetached = false; 
+            requestTocSync();
         }
-    });
+    }, { passive: true });
 
     // 计算根据正文进度，目录"应该"在的位置
     const calculateTargetScroll = () => {
@@ -196,6 +206,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 渲染循环（实现丝滑动画）
     const smoothSyncLoop = () => {
+        syncFrameId = null;
+        let shouldContinueSync = false;
+
         if (!toc.classList.contains('expanded-mode')) {
             if (isTocDetached || isActivelyScrollingToc) {
                 // 【浏览模式】：什么都不做，让它停在用户翻到的地方。
@@ -211,17 +224,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 只有差值足够大时才实际操作DOM，节省性能
                 if (Math.abs(targetTocScroll - currentTocScroll) > 0.5) {
                     toc.scrollTop = currentTocScroll;
+                    shouldContinueSync = true;
                 }
             }
         } else {
             currentTocScroll = toc.scrollTop;
         }
-        
-        requestAnimationFrame(smoothSyncLoop); 
+
+        if (shouldContinueSync) {
+            requestTocSync();
+        }
     };
     
-    // 启动动画循环
-    requestAnimationFrame(smoothSyncLoop);
+    // 初始同步一次，之后只在正文滚动或点击目录时继续同步。
+    requestTocSync();
 
     // --- 点击目录链接双端同步移动 ---
     const tocLinks = toc.querySelectorAll('a');
@@ -239,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     isTocDetached = false; 
                     isActivelyScrollingToc = false;
                     clearTimeout(tocScrollTimeout);
+                    currentTocScroll = toc.scrollTop;
 
                     const targetRect = targetElement.getBoundingClientRect();
                     const absoluteElementTop = targetRect.top + window.scrollY;
