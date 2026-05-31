@@ -1,6 +1,6 @@
 +++
 title = "Fixes"
-description = "Small troubleshooting notes and compact fixes."
+description = "小型故障排除笔记与紧凑修复方案"
 sort_by = "date"
 template = "fixes_list.html"
 [[extra.fixes]]
