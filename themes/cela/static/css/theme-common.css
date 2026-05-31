@@ -59,7 +59,7 @@
 }
 .archive-count,
 .archive-meta {
-  color: var(--secondary);
+  color: var(--primary);
   font-size: 14px;
 }
 .footer,
@@ -212,19 +212,19 @@ body:not(.dark) #sun {
   justify-content: center;
   min-height: 38px;
   padding: 0 16px;
-  color: #7a9387;
+  color: var(--primary);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
-  background: rgba(139, 168, 154, 0.1);
-  border: 1px solid rgba(139, 168, 154, 0.45);
+  background: var(--entry);
+  border: 1px solid var(--tertiary);
   border-radius: var(--radius);
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .pagination a:hover {
-  color: #6b8a7c;
-  background: rgba(139, 168, 154, 0.18);
-  border-color: #8ba89a;
+  color: var(--primary);
+  background: var(--border);
+  border-color: var(--tertiary);
 }
 .pagination .next {
   margin-inline-start: auto;
