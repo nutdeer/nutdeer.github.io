@@ -19,7 +19,7 @@
   <article class="fix-entry" data-search="{{ fix.title | lower }} {{ fix.content | lower }}">
     <div class="fix-main">
       <div class="fix-title">{{ fix.title }}</div>
-      <div class="fix-content">{{ fix.content | markdown(inline=true) | safe }}</div>
+      <div class="fix-content">{{ fix.content | escape | replace(from="**", to="<strong>", nth=1) | safe }}</div>
     </div>
     <span class="fix-date">{{ fix.date | date(format="%Y-%m-%d") }}</span>
   </article>
@@ -98,6 +98,7 @@
   color: var(--secondary);
   font-size: 14px;
   line-height: 1.7;
+  white-space: pre-wrap;
 }
 .fix-content strong {
   color: var(--primary);
