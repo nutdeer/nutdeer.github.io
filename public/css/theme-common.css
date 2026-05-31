@@ -544,7 +544,8 @@ a.section-count:hover {
 }
 .post-content .highlight:not(table) {
   margin: 10px auto;
-  background: var(--hljs-bg) !important;
+  background: var(--bg) !important;
+  border: 1px solid #dedede;
   border-radius: var(--radius);
   direction: ltr;
 }
@@ -572,8 +573,9 @@ a.section-count:hover {
 }
 /* 通用代码框样式 */
 .post-content pre {
-  color: var(--content); /* 文本颜色 */
-  background: var(--hljs-bg); /* 背景颜色 */
+  color: var(--fg); /* 文本颜色 */
+  background: var(--bg); /* 背景颜色 */
+  border: 1px solid #dedede;
   border-radius: var(--radius); /* 圆角 */
   padding: 10px; /* 内边距 */
   overflow-x: auto; /* 横向滚动 */
@@ -581,8 +583,9 @@ a.section-count:hover {
 }
 
 .post-content code {
-  color: var(--content);
-  background: var(--hljs-bg);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid #dedede;
   border-radius: var(--radius);
   padding: 4px 6px;
   font-size: 0.78em;
@@ -594,7 +597,8 @@ a.section-count:hover {
 .post-content pre code {
   display: block;
   background: transparent;
-  color: var(--content);
+  color: var(--fg);
+  border: 0;
   padding: 0;
   word-break: break-word;
   overflow-x: auto;
@@ -1032,12 +1036,12 @@ input {
   }
 }
 .bg {
-  color: #f8f8f2;
-  background-color: #282a36;
+  color: var(--fg);
+  background-color: var(--bg);
 }
 .chroma {
-  color: #f8f8f2;
-  background-color: #282a36;
+  color: var(--fg);
+  background-color: var(--bg);
 }
 .chroma .x {
 }
@@ -1058,60 +1062,60 @@ input {
   border: 0;
 }
 .chroma .hl {
-  background-color: #474733;
+  background-color: var(--selection);
 }
 .chroma .lnt {
   white-space: pre;
   user-select: none;
   margin-right: 0.4em;
   padding: 0 0.4em;
-  color: #7f7f7f;
+  color: var(--comment);
 }
 .chroma .ln {
   white-space: pre;
   user-select: none;
   margin-right: 0.4em;
   padding: 0 0.4em;
-  color: #7f7f7f;
+  color: var(--comment);
 }
 .chroma .line {
   display: flex;
 }
 .chroma .k {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .kc {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .kd {
-  color: #8be9fd;
+  color: var(--keyword);
   font-style: italic;
 }
 .chroma .kn {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .kp {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .kr {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .kt {
-  color: #8be9fd;
+  color: var(--type);
 }
 .chroma .n {
 }
 .chroma .na {
-  color: #50fa7b;
+  color: var(--decorator);
 }
 .chroma .nb {
-  color: #8be9fd;
+  color: var(--builtin-type);
   font-style: italic;
 }
 .chroma .bp {
 }
 .chroma .nc {
-  color: #50fa7b;
+  color: var(--type);
 }
 .chroma .no {
 }
@@ -1122,12 +1126,12 @@ input {
 .chroma .ne {
 }
 .chroma .nf {
-  color: #50fa7b;
+  color: var(--function);
 }
 .chroma .fm {
 }
 .chroma .nl {
-  color: #8be9fd;
+  color: var(--decorator);
   font-style: italic;
 }
 .chroma .nn {
@@ -1137,22 +1141,22 @@ input {
 .chroma .py {
 }
 .chroma .nt {
-  color: #ff79c6;
+  color: var(--angle);
 }
 .chroma .nv {
-  color: #8be9fd;
+  color: var(--type);
   font-style: italic;
 }
 .chroma .vc {
-  color: #8be9fd;
+  color: var(--type);
   font-style: italic;
 }
 .chroma .vg {
-  color: #8be9fd;
+  color: var(--type);
   font-style: italic;
 }
 .chroma .vi {
-  color: #8be9fd;
+  color: var(--type);
   font-style: italic;
 }
 .chroma .vm {
@@ -1162,101 +1166,102 @@ input {
 .chroma .ld {
 }
 .chroma .s {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sa {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sb {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sc {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .dl {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sd {
-  color: #f1fa8c;
+  color: var(--docstring);
 }
 .chroma .s2 {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .se {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sh {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .si {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sx {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .sr {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .s1 {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .ss {
-  color: #f1fa8c;
+  color: var(--string);
 }
 .chroma .m {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .mb {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .mf {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .mh {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .mi {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .il {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .mo {
-  color: #bd93f9;
+  color: var(--number);
 }
 .chroma .o {
-  color: #ff79c6;
+  color: var(--operator);
 }
 .chroma .ow {
-  color: #ff79c6;
+  color: var(--operator);
 }
 .chroma .p {
+  color: var(--punct);
 }
 .chroma .c {
-  color: #6272a4;
+  color: var(--comment);
 }
 .chroma .ch {
-  color: #6272a4;
+  color: var(--comment);
 }
 .chroma .cm {
-  color: #6272a4;
+  color: var(--comment);
 }
 .chroma .c1 {
-  color: #6272a4;
+  color: var(--comment);
 }
 .chroma .cs {
-  color: #6272a4;
+  color: var(--comment);
 }
 .chroma .cp {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .cpf {
-  color: #ff79c6;
+  color: var(--keyword);
 }
 .chroma .g {
 }
 .chroma .gd {
-  color: #f55;
+  color: var(--string);
 }
 .chroma .ge {
   text-decoration: underline;
@@ -1267,11 +1272,11 @@ input {
   font-weight: 700;
 }
 .chroma .gi {
-  color: #50fa7b;
+  color: var(--function);
   font-weight: 700;
 }
 .chroma .go {
-  color: #44475a;
+  color: var(--comment);
 }
 .chroma .gp {
 }
@@ -1286,4 +1291,131 @@ input {
   text-decoration: underline;
 }
 .chroma .w {
+}
+
+.z-code {
+  color: var(--fg);
+  background-color: var(--bg);
+}
+
+.z-hl {
+  background-color: var(--selection);
+}
+
+.giallo-ln {
+  color: var(--comment);
+}
+
+.z-text,
+.z-source {
+  color: var(--fg);
+}
+
+.z-comment,
+.z-punctuation.z-definition.z-comment {
+  color: var(--comment);
+  font-style: italic;
+}
+
+.z-keyword,
+.z-storage.z-modifier,
+.z-keyword.z-operator.z-word,
+.z-keyword.z-operator.z-new,
+.z-variable.z-language.z-super,
+.z-support.z-type.z-primitive,
+.z-punctuation.z-definition.z-keyword,
+.z-support.z-type.z-python,
+.z-storage.z-modifier.z-rust,
+.z-storage.z-type.z-rust,
+.z-keyword.z-other.z-doctype,
+.z-support.z-constant.z-node {
+  color: var(--keyword);
+}
+
+.z-storage.z-type,
+.z-entity.z-name.z-type,
+.z-support.z-class,
+.z-meta.z-type,
+.z-meta.z-type-alias,
+.z-support.z-type,
+.z-entity.z-name.z-class,
+.z-entity.z-other.z-inherited-class,
+.z-meta.z-function-call.z-constructor,
+.z-entity.z-name.z-struct,
+.z-entity.z-name.z-enum,
+.z-entity.z-name.z-scope-resolution.z-cpp {
+  color: var(--type);
+  font-style: italic;
+}
+
+.z-support.z-function.z-builtin,
+.z-support.z-attribute.z-builtin {
+  color: var(--builtin-type);
+}
+
+.z-entity.z-name.z-function,
+.z-meta.z-function-call,
+.z-meta.z-function-call.z-python,
+.z-meta.z-function-call.z-method,
+.z-support.z-function,
+.z-variable.z-function,
+.z-support.z-function.z-misc,
+.z-support.z-macro.z-rust {
+  color: var(--function);
+}
+
+.z-string,
+.z-punctuation.z-definition.z-string,
+.z-string.z-unquoted.z-graphql,
+.z-variable.z-parameter.z-url {
+  color: var(--string);
+}
+
+.z-constant.z-numeric,
+.z-constant.z-language,
+.z-constant.z-language.z-python,
+.z-constant.z-language.z-boolean,
+.z-constant.z-language.z-false,
+.z-constant.z-language.z-true,
+.z-variable.z-other.z-constant,
+.z-entity.z-name.z-constant,
+.z-meta.z-generic.z-rust {
+  color: var(--number);
+}
+
+.z-punctuation {
+  color: var(--punct);
+}
+
+.z-punctuation.z-accessor,
+.z-keyword.z-operator,
+.z-punctuation.z-definition.z-generic,
+.z-punctuation.z-separator.z-key-value,
+.z-punctuation.z-definition.z-typeparameters,
+.z-punctuation.z-section.z-parameters,
+.z-storage.z-modifier.z-reference.z-cpp,
+.z-punctuation.z-separator.z-operator.z-css {
+  color: var(--operator);
+}
+
+.z-entity.z-name.z-tag,
+.z-punctuation.z-definition.z-tag {
+  color: var(--angle);
+}
+
+.z-meta.z-decorator,
+.z-punctuation.z-decorator,
+.z-punctuation.z-definition.z-annotation,
+.z-storage.z-type.z-annotation,
+.z-punctuation.z-decorator.z-ts {
+  color: var(--decorator);
+}
+
+.z-variable.z-parameter,
+.z-variable.z-other,
+.z-meta.z-indexed-name.z-python,
+.z-meta.z-item-access.z-python,
+.z-meta.z-function.z-parameters {
+  color: var(--decorator);
+  font-style: italic;
 }

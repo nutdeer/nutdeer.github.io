@@ -8,9 +8,10 @@
   <header class="entry-header">
     <h2>{{ page.title }}</h2>
   </header>
-  {% if page.summary %}
+  {% set entry_description = page.description | default(value=page.summary) %}
+  {% if entry_description %}
   <div class="entry-content">
-    <p>{{ page.summary | safe }}</p>
+    <p>{{ entry_description | safe }}</p>
   </div>
   {% endif %}
   <footer class="entry-footer">
@@ -55,9 +56,10 @@
           <header class="entry-header">
             <h2>{{ page.title }}</h2>
           </header>
-          {% if page.summary %}
+          {% set entry_description = page.description | default(value=page.summary) %}
+          {% if entry_description %}
           <div class="entry-content">
-            <p>{{ page.summary | safe }}</p>
+            <p>{{ entry_description | safe }}</p>
           </div>
           {% endif %}
           <footer class="entry-footer">
@@ -76,4 +78,3 @@
 
 </div>
 {% endif %}
-
