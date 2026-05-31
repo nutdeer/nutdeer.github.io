@@ -1,6 +1,6 @@
 +++
 title = "Logs"
-description = "长文档与完整记录"
+description = "Long-form records and complete notes."
 sort_by = "date"
 paginate_by = 5
 transparent = false

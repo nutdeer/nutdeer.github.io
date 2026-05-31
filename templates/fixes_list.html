@@ -17,11 +17,13 @@
   {% if section.extra.fixes %}
   {% for fix in section.extra.fixes | reverse %}
   <article class="fix-entry" data-search="{{ fix.title | lower }} {{ fix.content | lower }}">
-    <div class="fix-main">
-      <div class="fix-title">{{ fix.title }}</div>
-      <div class="fix-content">{{ fix.content | escape | replace(from="**", to="<strong>", nth=1) | safe }}</div>
+    <div class="fix-head">
+      <h2 class="fix-title">{{ fix.title }}</h2>
+      <time class="fix-date" datetime="{{ fix.date | date(format="%Y-%m-%d") }}">{{ fix.date | date(format="%Y 年 %-m 月 %-d 日") }}</time>
     </div>
-    <span class="fix-date">{{ fix.date | date(format="%Y-%m-%d") }}</span>
+    {% if fix.content %}
+    <div class="fix-content">{{ fix.content | escape | regex_replace(pattern="\*\*([^*]+)\*\*", rep="<strong>$1</strong>") | safe }}</div>
+    {% endif %}
   </article>
   {% endfor %}
   {% endif %}
@@ -66,53 +68,66 @@
 .fix-search span {
   color: var(--secondary);
   font-size: 13px;
+  line-height: 1.2;
   white-space: nowrap;
 }
 .fixes-list {
+  --fix-text-size: 16px;
   max-width: var(--main-width);
   margin: 0 auto;
   border-top: 1px solid var(--border);
 }
 .fix-entry {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: start;
-  padding: 16px 0;
+  padding: 14px 0;
+  color: var(--primary);
   border-bottom: 1px solid var(--border);
 }
 .fix-entry.is-hidden {
   display: none;
 }
-.fix-main {
-  display: grid;
-  gap: 8px;
+.fix-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
 }
 .fix-title {
+  margin: 0;
   color: var(--primary);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--fix-text-size);
+  font-weight: 700;
   line-height: 1.35;
 }
-.fix-content {
+.fix-date {
+  flex: 0 0 auto;
   color: var(--secondary);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.fix-content {
+  display: block;
+  overflow: visible;
+  margin: 0;
+  color: var(--primary);
+  font-size: var(--fix-text-size);
+  line-height: 1.6;
   white-space: pre-wrap;
+  -webkit-line-clamp: unset;
 }
 .fix-content strong {
   color: var(--primary);
   font-weight: 700;
 }
-.fix-date {
-  color: var(--secondary);
-  font-size: 13px;
-  white-space: nowrap;
-}
 @media screen and (max-width: 640px) {
-  .fix-entry {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .fix-head {
+    display: block;
+  }
+
+  .fix-date {
+    display: block;
+    margin-top: 4px;
   }
 }
 </style>

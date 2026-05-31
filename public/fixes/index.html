@@ -16,7 +16,7 @@
 
 
 
-<meta name="description" content="小故障记录与小方案">
+<meta name="description" content="Small troubleshooting notes and compact fixes.">
 
 
 
@@ -394,7 +394,7 @@ class="list" id="top">
 <header class="page-header fixes-header">
   <h1>Fixes</h1>
   
-  <p>小故障记录与小方案</p>
+  <p>Small troubleshooting notes and compact fixes.</p>
   
 </header>
 
@@ -406,36 +406,38 @@ class="list" id="top">
 <div class="fixes-list">
   
   
-  <article class="fix-entry" data-search="测试 **试验下加粗**嘻嘻">
-    <div class="fix-main">
-      <div class="fix-title">测试</div>
-      <div class="fix-content"><strong>试验下加粗</strong>嘻嘻</div>
+  <article class="fix-entry" data-search="ros工具 看话题
+rqt_plot 数据曲线
+rqt_bag 导入包看数据发布频率啥的
+rosrun plotjuggler plotjuggler 数据曲线
+看日志
+rosrun swri_console swri_console">
+    <div class="fix-head">
+      <h2 class="fix-title">ROS工具</h2>
+      <time class="fix-date" datetime="2026-05-20">2026 年 5 月 20 日</time>
     </div>
-    <span class="fix-date">2026-05-31</span>
-  </article>
-  
-  <article class="fix-entry" data-search="zola 主页卡片显示正文开头而不是 description 现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。
-原因：主页列表模板使用了 page.summary。
-处理：列表摘要改成 page.description | default(value=page.summary)。">
-    <div class="fix-main">
-      <div class="fix-title">Zola 主页卡片显示正文开头而不是 description</div>
-      <div class="fix-content">现象：文章标题下方显示正文第一段，而不是 front matter 里的 description。
-原因：主页列表模板使用了 page.summary。
-处理：列表摘要改成 page.description | default(value=page.summary)。</div>
-    </div>
-    <span class="fix-date">2026-05-31</span>
+    
+    <div class="fix-content">看话题
+rqt_plot 数据曲线
+rqt_bag 导入包看数据发布频率啥的
+rosrun plotjuggler PlotJuggler 数据曲线
+看日志
+rosrun swri_console swri_console</div>
+    
   </article>
   
   <article class="fix-entry" data-search="qgc 连接后脚本才收到 px4 心跳 现象：运行 flow_check.py 后一直显示等待心跳包。
 处理：先打开 qgc 连接飞控，确认能正常读取数据后关闭 qgc，再运行脚本。
 备注：优先检查端口号，例如 &#x2F;dev&#x2F;ttyacm0。">
-    <div class="fix-main">
-      <div class="fix-title">QGC 连接后脚本才收到 PX4 心跳</div>
-      <div class="fix-content">现象：运行 flow_check.py 后一直显示等待心跳包。
-处理：先打开 QGC 连接飞控，确认能正常读取数据后关闭 QGC，再运行脚本。
-备注：优先检查端口号，例如 /dev/ttyACM0。</div>
+    <div class="fix-head">
+      <h2 class="fix-title">QGC 连接后脚本才收到 PX4 心跳</h2>
+      <time class="fix-date" datetime="2026-05-31">2026 年 5 月 31 日</time>
     </div>
-    <span class="fix-date">2026-05-31</span>
+    
+    <div class="fix-content">现象：运行 flow_check.py 后一直显示等待心跳包。
+处理：先打开 QGC 连接飞控，确认能正常读取数据后关闭 QGC，再运行脚本。
+备注：优先检查端口号，例如 &#x2F;dev&#x2F;ttyACM0。</div>
+    
   </article>
   
   
@@ -480,52 +482,66 @@ class="list" id="top">
 .fix-search span {
   color: var(--secondary);
   font-size: 13px;
+  line-height: 1.2;
   white-space: nowrap;
 }
 .fixes-list {
+  --fix-text-size: 16px;
   max-width: var(--main-width);
   margin: 0 auto;
   border-top: 1px solid var(--border);
 }
 .fix-entry {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: start;
-  padding: 16px 0;
+  padding: 14px 0;
+  color: var(--primary);
   border-bottom: 1px solid var(--border);
 }
 .fix-entry.is-hidden {
   display: none;
 }
-.fix-main {
-  display: grid;
-  gap: 8px;
+.fix-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
 }
 .fix-title {
+  margin: 0;
   color: var(--primary);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--fix-text-size);
+  font-weight: 700;
   line-height: 1.35;
 }
-.fix-content {
+.fix-date {
+  flex: 0 0 auto;
   color: var(--secondary);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.fix-content {
+  display: block;
+  overflow: visible;
+  margin: 0;
+  color: var(--primary);
+  font-size: var(--fix-text-size);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  -webkit-line-clamp: unset;
 }
 .fix-content strong {
   color: var(--primary);
   font-weight: 700;
 }
-.fix-date {
-  color: var(--secondary);
-  font-size: 13px;
-  white-space: nowrap;
-}
 @media screen and (max-width: 640px) {
-  .fix-entry {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .fix-head {
+    display: block;
+  }
+
+  .fix-date {
+    display: block;
+    margin-top: 4px;
   }
 }
 </style>

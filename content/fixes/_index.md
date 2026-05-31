@@ -1,7 +1,8 @@
 +++
 title = "Fixes"
-description = "小故障记录与小方案"
+description = "Small troubleshooting notes and compact fixes."
 sort_by = "date"
+render = true
 template = "fixes_list.html"
 [[extra.fixes]]
 date = 2026-05-31
