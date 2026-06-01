@@ -15,14 +15,15 @@
 
 <div class="fixes-list">
   {% if section.extra.fixes %}
-  {% for fix in section.extra.fixes | reverse %}
-  <article class="fix-entry" data-search="{{ fix.title | lower }} {{ fix.content | lower }}">
+  {% for fix in section.extra.fixes | sort(attribute="date") | reverse %}
+  <article class="fix-entry" id="fix-{{ loop.index }}" data-search="{{ fix.title | lower }} {{ fix.content | lower }}">
     <div class="fix-head">
       <h2 class="fix-title">{{ fix.title }}</h2>
       <time class="fix-date" datetime="{{ fix.date | date(format="%Y-%m-%d") }}">{{ fix.date | date(format="%Y 年 %-m 月 %-d 日") }}</time>
     </div>
     {% if fix.content %}
-    <div class="fix-content">{{ fix.content | escape | regex_replace(pattern="\*\*([^*]+)\*\*", rep="<strong>$1</strong>") | safe }}</div>
+    <div class="fix-content">{{ fix.content | markdown | safe }}</div>
+    <button class="fix-toggle" type="button" aria-expanded="false">展开</button>
     {% endif %}
   </article>
   {% endfor %}
@@ -94,7 +95,7 @@
 }
 .fix-title {
   margin: 0;
-  color: var(--primary);
+  color: #42678E;
   font-size: var(--fix-text-size);
   font-weight: 700;
   line-height: 1.35;
@@ -108,17 +109,78 @@
 }
 .fix-content {
   display: block;
-  overflow: visible;
+  max-height: 220px;
+  overflow: hidden;
   margin: 0;
   color: var(--primary);
   font-size: var(--fix-text-size);
   line-height: 1.6;
-  white-space: pre-wrap;
-  -webkit-line-clamp: unset;
+  position: relative;
+}
+.fix-entry.is-collapsible:not(.is-expanded) .fix-content::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--theme));
 }
 .fix-content strong {
   color: var(--primary);
   font-weight: 700;
+}
+.fix-content p,
+.fix-content ul,
+.fix-content ol,
+.fix-content pre,
+.fix-content blockquote {
+  margin: 0 0 10px;
+}
+.fix-content p {
+  white-space: pre-wrap;
+}
+.fix-content p:last-child,
+.fix-content ul:last-child,
+.fix-content ol:last-child,
+.fix-content pre:last-child,
+.fix-content blockquote:last-child {
+  margin-bottom: 0;
+}
+.fix-content ul,
+.fix-content ol {
+  padding-left: 22px;
+}
+.fix-content code {
+  color: var(--primary);
+  background: rgba(139, 168, 154, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.fix-content pre {
+  overflow-x: auto;
+  padding: 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.fix-content pre code {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.fix-toggle {
+  display: none;
+  margin: 8px 0 0 auto;
+  width: max-content;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.fix-entry.is-collapsible .fix-toggle {
+  display: block;
 }
 @media screen and (max-width: 640px) {
   .fix-head {
@@ -136,6 +198,7 @@
 const fixSearchInput = document.getElementById('fix-search-input');
 const fixSearchCount = document.getElementById('fix-search-count');
 const fixEntries = Array.from(document.querySelectorAll('.fix-entry'));
+const collapsedFixHeight = 220;
 
 function normalizeFixText(text) {
   return (text || '').toLowerCase().trim();
@@ -157,5 +220,43 @@ function updateFixSearch() {
 
 fixSearchInput.addEventListener('input', updateFixSearch);
 updateFixSearch();
+
+fixEntries.forEach((entry) => {
+  const content = entry.querySelector('.fix-content');
+  const toggle = entry.querySelector('.fix-toggle');
+  if (!content || !toggle) return;
+
+  function getFullContentHeight() {
+    const previousOverflow = content.style.overflow;
+    const previousMaxHeight = content.style.maxHeight;
+    const previousTransition = content.style.transition;
+    content.style.transition = 'none';
+    content.style.maxHeight = 'none';
+    content.style.overflow = 'visible';
+    const height = content.scrollHeight;
+    content.style.maxHeight = previousMaxHeight;
+    content.style.overflow = previousOverflow;
+    content.style.transition = previousTransition;
+    return height;
+  }
+
+  if (getFullContentHeight() > collapsedFixHeight + 8) {
+    entry.classList.add('is-collapsible');
+    content.style.maxHeight = `${collapsedFixHeight}px`;
+  }
+
+  function setExpanded(expanded) {
+    const targetHeight = expanded ? getFullContentHeight() : collapsedFixHeight;
+
+    content.style.maxHeight = `${targetHeight}px`;
+    entry.classList.toggle('is-expanded', expanded);
+    toggle.textContent = expanded ? '收起' : '展开';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
+  toggle.addEventListener('click', () => {
+    setExpanded(!entry.classList.contains('is-expanded'));
+  });
+});
 </script>
 {% endblock main %}

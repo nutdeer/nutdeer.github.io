@@ -203,7 +203,7 @@ show_word_count = true
 # [Cela hint] Cela will use this for search page title (default is "Search" if not set)
 search_title = "Search"
 # [Cela hint] Cela will use this for search page description (default is "Find posts by title or body content" if not set)
-search_description = "按标题或正文查找"
+search_description = "Find posts by title or body content."
 
 [extra.cela.color]
 
