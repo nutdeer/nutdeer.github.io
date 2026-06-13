@@ -39,7 +39,7 @@ rosed fast_lio mapping_mid360.launch
 pcd_save_en: true
 ```
 
-会保存在
+会保存在 `$(fast_lio)/PCD/scans.pcd`
 
 ## 仿真
 
@@ -52,6 +52,8 @@ roslaunch epic_planner com_wood.launch
 # epic/com_wood.launch
 
 # 参数单独设一份同名的
+# 加到
+# epic/global_planner/exploration_manager/config/com_wood.yaml
  <arg name="config_file" default="$(arg map_name).yaml" />
 # 模拟也设一份
 <include file="$(find epic_planner)/launch/simulation_$(arg map_name).launch"/>
