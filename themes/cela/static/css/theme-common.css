@@ -459,7 +459,7 @@ a.section-count:hover {
   font-size: 16px;
 }
 .post-content {
-  color: var(--content);
+  color: var(--primary);
 }
 .post-content h3,
 .post-content h4,
@@ -476,16 +476,16 @@ a.section-count:hover {
   font-size: 32px;
 }
 .post-content h3 {
-  font-size: 24px;
+  font-size: 25px;
 }
 .post-content h4 {
-  font-size: 16px;
+  font-size: 20px;
 }
 .post-content h5 {
-  font-size: 14px;
+  font-size: 17.5px;
 }
 .post-content h6 {
-  font-size: 12px;
+  font-size: 17px;
 }
 .post-content a,
 .toc a:hover {
