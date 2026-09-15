@@ -14,7 +14,7 @@
     --cal-tooltip-border: var(--border);
     --cal-tooltip-shadow: rgba(0, 0, 0, 0.15);
     --cal-hover-ring: rgba(0, 0, 0, 0.2);
-    --cal-today-ring: #c2603e; /* 陶土橙：和工作蓝/休息绿/学习黄都明显区分 */
+    --cal-today-ring: #e9e3fe; /* 薰衣草淡紫（再调亮 25%）：极淡，白底卡片上仅剩隐约轮廓 */
 }
 
 body.dark {
@@ -27,7 +27,7 @@ body.dark {
     --cal-tooltip-border: #585b70;
     --cal-tooltip-shadow: rgba(0, 0, 0, 0.5);
     --cal-hover-ring: rgba(255, 255, 255, 0.35);
-    --cal-today-ring: #dbe5de;
+    --cal-today-ring: #c4b5fd; /* 薰衣草淡紫，和深色底色也搭，明暗统一 */
 }
 
 /* === 容器与顶部按钮对齐控制 === */
@@ -79,8 +79,8 @@ body.dark {
 
 .day-cell { width: 22px; height: 22px; position: relative; cursor: pointer; border-radius: 4px; transition: 0.1s;}
 .day-cell.interactive:hover { transform: scale(1.2); z-index: 2; border: 1px solid var(--cal-hover-ring);}
-/* 今天的格子：外圈先垫一层和月份卡片同色的"缝"，再是描边，让标记浮起来、不和状态色混淆 */
-.day-cell.is-today { box-shadow: 0 0 0 1.5px var(--entry), 0 0 0 3px var(--cal-today-ring); }
+/* 今天的格子：单层淡紫描边标记，不随记录状态变色 */
+.day-cell.is-today { box-shadow: 0 0 0 3px var(--cal-today-ring); }
 
 .bg-empty-wd { background-color: var(--cal-empty-wd); }
 .bg-empty-we { background-color: var(--cal-empty-we); }

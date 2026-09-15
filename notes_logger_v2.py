@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -95,16 +96,20 @@ class LoggerApp:
 
         self.notes_tab = ttk.Frame(self.notebook, style="App.TFrame", padding=14)
         self.docs_tab = ttk.Frame(self.notebook, style="App.TFrame", padding=14)
+        self.preview_tab = ttk.Frame(self.notebook, style="App.TFrame", padding=14)
         self.sync_tab = ttk.Frame(self.notebook, style="App.TFrame", padding=14)
         self.notebook.add(self.notes_tab, text="日常日志 Notes")
         self.notebook.add(self.docs_tab, text="文档日志 Logs / Tech")
+        self.notebook.add(self.preview_tab, text="本地预览")
         self.notebook.add(self.sync_tab, text="同步仓库")
 
         self.setup_notes_tab()
         self.setup_docs_tab()
+        self.setup_preview_tab()
         self.setup_sync_tab()
         self.refresh_month_entries()
         threading.Thread(target=self.auto_pull, daemon=True).start()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def setup_style(self):
         style = ttk.Style()
@@ -561,6 +566,104 @@ class LoggerApp:
     @staticmethod
     def is_safe_target_name(target_name):
         return target_name not in {".", ".."} and os.path.basename(target_name) == target_name and "\\" not in target_name
+
+    def setup_preview_tab(self):
+        self.zola_process = None
+        ttk.Label(self.preview_tab, text="本地预览", style="Title.TLabel").pack(anchor=tk.W)
+        ttk.Label(self.preview_tab, text="启动 zola serve，保存内容后浏览器会自动刷新，无需 Push。", style="Hint.TLabel").pack(anchor=tk.W, pady=(2, 8))
+
+        control_row = ttk.Frame(self.preview_tab, style="App.TFrame")
+        control_row.pack(fill=tk.X)
+        ttk.Label(control_row, text="端口").pack(side=tk.LEFT, padx=(0, 6))
+        self.preview_port_var = tk.StringVar(value="1111")
+        ttk.Entry(control_row, textvariable=self.preview_port_var, width=8).pack(side=tk.LEFT, padx=(0, 12))
+        self.start_preview_btn = ttk.Button(control_row, text="启动本地网页", command=self.start_preview)
+        self.stop_preview_btn = ttk.Button(control_row, text="停止", style="Soft.TButton", command=self.stop_preview, state=tk.DISABLED)
+        self.open_browser_btn = ttk.Button(control_row, text="打开浏览器", style="Soft.TButton", command=self.open_preview_browser, state=tk.DISABLED)
+        self.start_preview_btn.pack(side=tk.LEFT, padx=4)
+        self.stop_preview_btn.pack(side=tk.LEFT, padx=4)
+        self.open_browser_btn.pack(side=tk.LEFT, padx=4)
+
+        self.preview_log = tk.Text(self.preview_tab, height=20, state=tk.DISABLED, bg=self.CARD, fg=self.INK, relief=tk.FLAT, highlightthickness=1, highlightbackground=self.BORDER, padx=9, pady=8)
+        self.preview_log.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+
+    def log_preview_msg(self, message):
+        def append():
+            self.preview_log.config(state=tk.NORMAL)
+            self.preview_log.insert(tk.END, message + "\n")
+            self.preview_log.see(tk.END)
+            self.preview_log.config(state=tk.DISABLED)
+        self.root.after(0, append)
+
+    def preview_url(self):
+        return f"http://127.0.0.1:{self.preview_port_var.get().strip()}/"
+
+    def start_preview(self):
+        if self.zola_process and self.zola_process.poll() is None:
+            messagebox.showinfo("提示", "本地预览已在运行。")
+            return
+        port = self.preview_port_var.get().strip()
+        if not port.isdigit() or not 1 <= int(port) <= 65535:
+            messagebox.showerror("错误", "端口必须是 1-65535 的数字。")
+            return
+        if shutil.which("zola") is None:
+            messagebox.showerror("错误", "找不到 zola 命令，请先安装 Zola。")
+            return
+        try:
+            self.zola_process = subprocess.Popen(
+                ["zola", "serve", "--interface", "127.0.0.1", "--port", port],
+                cwd=REPO_PATH, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace",
+            )
+        except OSError as exc:
+            messagebox.showerror("错误", f"启动失败：\n{exc}")
+            return
+        self.start_preview_btn.config(state=tk.DISABLED)
+        self.stop_preview_btn.config(state=tk.NORMAL)
+        self.open_browser_btn.config(state=tk.NORMAL)
+        self.status_var.set(f"本地预览运行中：{self.preview_url()}")
+        threading.Thread(target=self.read_preview_output, daemon=True).start()
+        threading.Thread(target=self.watch_preview_process, daemon=True).start()
+        self.root.after(1500, self.open_preview_browser)
+
+    def read_preview_output(self):
+        process = self.zola_process
+        for line in process.stdout:
+            self.log_preview_msg(line.rstrip())
+
+    def watch_preview_process(self):
+        process = self.zola_process
+        return_code = process.wait()
+        def on_exit():
+            if self.zola_process is process:
+                self.zola_process = None
+                self.start_preview_btn.config(state=tk.NORMAL)
+                self.stop_preview_btn.config(state=tk.DISABLED)
+                self.open_browser_btn.config(state=tk.DISABLED)
+                if return_code:
+                    self.status_var.set(f"zola serve 异常退出（代码 {return_code}），请查看日志。")
+                else:
+                    self.status_var.set("本地预览已停止。")
+        self.root.after(0, on_exit)
+
+    def stop_preview(self):
+        process = self.zola_process
+        if not process or process.poll() is not None:
+            return
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+    def open_preview_browser(self):
+        if not self.zola_process or self.zola_process.poll() is not None:
+            return
+        webbrowser.open(self.preview_url())
+
+    def on_close(self):
+        self.stop_preview()
+        self.root.destroy()
 
     def setup_sync_tab(self):
         ttk.Label(self.sync_tab, text="同步仓库", style="Title.TLabel").pack(anchor=tk.W)
