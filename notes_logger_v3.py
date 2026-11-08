@@ -180,6 +180,16 @@ def pull_repository(repo):
     return pulled, "\n".join(messages)
 
 
+def repository_needs_sync(repo):
+    """Check local state only; closing an already uploaded log needs no network."""
+    ok, changes = repository_git(repo, ["status", "--porcelain", "--untracked-files=all", "--",
+                                       "content/notes", "content/fixes", "content/logs", "content/tech"])
+    if not ok or changes:
+        return True
+    ok, ahead = repository_git(repo, ["rev-list", "--count", "@{u}..HEAD"])
+    return not ok or ahead.strip() != "0"
+
+
 class LoggerApp:
     BG = "#f5f7f4"
     CARD = "#ffffff"
@@ -1085,7 +1095,7 @@ class LoggerApp:
                 return
             if self.has_note_draft():
                 return
-        if self.skip_sync_on_close:
+        if self.skip_sync_on_close or not repository_needs_sync(REPO_PATH):
             self.stop_preview()
             self.root.destroy()
         else:

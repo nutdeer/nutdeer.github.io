@@ -130,6 +130,15 @@ class PullTests(unittest.TestCase):
         self.assertEqual(git(self.remote, 'show', 'HEAD:content/notes/test.md'), 'local diary')
         self.assertEqual(git(self.a, 'diff', '--cached', '--name-only'), 'staged.txt')
         self.assertEqual(git(self.remote, 'show', 'HEAD:staged.txt'), 'base')
+        self.assertFalse(app_module.repository_needs_sync(self.a))
+        (notes / 'test.md').write_text('new diary after push\n')
+        self.assertTrue(app_module.repository_needs_sync(self.a))
+
+    def test_exit_retries_committed_but_unpushed_work(self):
+        (self.a / 'local.txt').write_text('committed locally\n')
+        git(self.a, 'add', 'local.txt')
+        git(self.a, 'commit', '-m', 'local work')
+        self.assertTrue(app_module.repository_needs_sync(self.a))
 
     def test_auto_sync_conflict_keeps_backup_without_pushing(self):
         (self.a / 'shared.txt').write_text('local diary\n')
@@ -190,11 +199,20 @@ class CloseTests(unittest.TestCase):
     def test_close_saves_draft_before_sync(self):
         app = Mock(git_busy=False, skip_sync_on_close=False)
         app.has_note_draft.side_effect = [True, False]
-        app_module.LoggerApp.on_close(app)
+        with patch.object(app_module, 'repository_needs_sync', return_value=True):
+            app_module.LoggerApp.on_close(app)
         self.assertEqual(app.method_calls, [
             unittest.mock.call.has_note_draft(), unittest.mock.call.save_note_log(),
             unittest.mock.call.has_note_draft(), unittest.mock.call.auto_sync(close_after=True)])
         app.root.destroy.assert_not_called()
+
+    def test_close_after_successful_push_does_not_sync_again(self):
+        app = Mock(git_busy=False, skip_sync_on_close=False)
+        app.has_note_draft.return_value = False
+        with patch.object(app_module, 'repository_needs_sync', return_value=False):
+            app_module.LoggerApp.on_close(app)
+        app.auto_sync.assert_not_called()
+        app.root.destroy.assert_called_once()
 
     def test_close_keeps_editor_open_when_save_fails(self):
         app = Mock(git_busy=False, skip_sync_on_close=False)
