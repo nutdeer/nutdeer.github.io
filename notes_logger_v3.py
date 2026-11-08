@@ -1047,7 +1047,7 @@ class LoggerApp:
             backup_dir.mkdir(exist_ok=True)
             backup_path = backup_dir / (datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json")
             data = {"note": self.note_form_snapshot(), "documents": {}}
-            for name in ("doc_mode_var", "doc_file_var", "doc_target_var", "doc_title_var", "doc_section_var", "doc_with_assets_var"):
+            for name in ("doc_mode_var", "doc_file_var", "doc_target_var", "doc_title_var", "doc_section_var", "doc_with_assets_var", "doc_date_var", "doc_description_var", "doc_tags_var"):
                 variable = getattr(self, name, None)
                 if variable is not None:
                     data["documents"][name] = variable.get()
@@ -1062,7 +1062,11 @@ class LoggerApp:
         with NETWORK_PROCESS_LOCK:
             for process in list(NETWORK_PROCESSES):
                 kill_git_process(process)
-        self.stop_preview()
+        if self.zola_process is not None and self.zola_process.poll() is None:
+            try:
+                self.zola_process.terminate()
+            except OSError:
+                pass
         os._exit(0)
 
     def on_close(self):

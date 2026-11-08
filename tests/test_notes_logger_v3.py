@@ -1,6 +1,7 @@
 """Local-only regression checks for v3; never access the user's remote or notes."""
 import importlib.util
 import os
+import json
 import subprocess
 import socket
 import time
@@ -142,6 +143,29 @@ class PullTests(unittest.TestCase):
 
 
 class CloseTests(unittest.TestCase):
+    def test_force_exit_backs_up_editor_even_when_sync_is_busy(self):
+        app = Mock(git_busy=True, zola_process=None)
+        app.note_form_snapshot.return_value = ('2026-11-08', '工作', '未保存的草稿')
+        for name in ('doc_mode_var', 'doc_file_var', 'doc_target_var', 'doc_title_var', 'doc_section_var', 'doc_with_assets_var', 'doc_date_var', 'doc_description_var', 'doc_tags_var'):
+            getattr(app, name).get.return_value = 'draft'
+        with tempfile.TemporaryDirectory() as directory, patch.object(app_module, 'REPO_PATH', Path(directory)), patch.object(app_module.messagebox, 'askyesno', return_value=True), patch.object(app_module.os, '_exit') as exit_process:
+            app_module.LoggerApp.force_exit(app)
+            backups = list((Path(directory) / '.notes_logger_drafts').glob('*.json'))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(json.loads(backups[0].read_text())['note'][2], '未保存的草稿')
+            exit_process.assert_called_once_with(0)
+            app.auto_sync.assert_not_called()
+
+    def test_force_exit_stays_open_when_backup_fails(self):
+        app = Mock()
+        with tempfile.TemporaryDirectory() as directory:
+            blocker = Path(directory) / '.notes_logger_drafts'
+            blocker.write_text('not a directory')
+            with patch.object(app_module, 'REPO_PATH', Path(directory)), patch.object(app_module.messagebox, 'askyesno', return_value=True), patch.object(app_module.messagebox, 'showerror') as error, patch.object(app_module.os, '_exit') as exit_process:
+                app_module.LoggerApp.force_exit(app)
+                error.assert_called_once()
+                exit_process.assert_not_called()
+
     @unittest.skipUnless(os.name == 'posix', 'POSIX process group test')
     def test_cancel_interrupts_hung_git_transport(self):
         with tempfile.TemporaryDirectory() as directory:

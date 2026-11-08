@@ -1,4 +1,5 @@
 # Zola local build output generated during preview/checks.
+/.notes_logger_drafts/
 /public/404.html
 /public/atom.xml
 /public/categories/
