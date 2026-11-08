@@ -6,13 +6,16 @@ same Zola content directory but leaves the old tool untouched.
 
 import calendar
 import html
+import json
 import os
 import queue
 import re
 import shutil
+import signal
 import subprocess
 import threading
 import tempfile
+import time
 import tkinter as tk
 import webbrowser
 from datetime import datetime
@@ -27,6 +30,19 @@ REPO_PATH = Path(os.environ.get("NUTDEER_REPO_PATH", SCRIPT_DIR)).expanduser()
 
 DAY_RE = re.compile(r"day\s*=\s*(\d+)")
 TOML_STRING_RE_TEMPLATE = r'{key}\s*=\s*"((?:\\.|[^"])*)"'
+GIT_TASK_CONTEXT = threading.local()
+NETWORK_PROCESSES = set()
+NETWORK_PROCESS_LOCK = threading.Lock()
+
+
+def kill_git_process(process):
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+    except ProcessLookupError:
+        pass
 
 
 def toml_unescape(value):
@@ -76,16 +92,39 @@ def parse_month_entries(month_file, year, month):
 
 def repository_git(repo, args):
     """Run Git without waiting for terminal password prompts."""
+    network = args[0] in ("fetch", "pull", "push", "ls-remote")
+    cancel = getattr(GIT_TASK_CONTEXT, "cancel", None)
+    if network and cancel is not None and cancel.is_set():
+        return False, "已取消网络同步，本地文件和提交保留。"
     try:
-        result = subprocess.run(
-            ["git"] + args, cwd=repo, capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=120,
+        process = subprocess.Popen(
+            ["git"] + args, cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            encoding="utf-8", errors="replace", start_new_session=(os.name == "posix"),
             env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
         )
-        output = "\n".join(p.strip() for p in (result.stdout, result.stderr) if p.strip())
-        return result.returncode == 0, output
+        if network:
+            with NETWORK_PROCESS_LOCK:
+                NETWORK_PROCESSES.add(process)
+        deadline = time.monotonic() + (30 if network else 120)
+        while True:
+            try:
+                stdout, stderr = process.communicate(timeout=0.2)
+                break
+            except subprocess.TimeoutExpired:
+                cancelled = network and cancel is not None and cancel.is_set()
+                if cancelled or time.monotonic() >= deadline:
+                    # Kill the transport too, so inherited output pipes cannot hang communicate().
+                    kill_git_process(process)
+                    process.communicate(timeout=2)
+                    return False, ("已取消网络同步" if cancelled else "Git 操作超时") + "；本地文件和提交保留，推送结果需下次联网核对。"
+        output = "\n".join(p.strip() for p in (stdout, stderr) if p.strip())
+        return process.returncode == 0, output
     except (OSError, subprocess.TimeoutExpired) as exc:
         return False, str(exc)
+    finally:
+        if network and 'process' in locals():
+            with NETWORK_PROCESS_LOCK:
+                NETWORK_PROCESSES.discard(process)
 
 
 def pull_repository(repo):
@@ -154,6 +193,9 @@ class LoggerApp:
         self.root = root
         self.ui_queue = queue.Queue()
         self.git_busy = False
+        self.close_pending = False
+        self.skip_sync_on_close = False
+        self.git_cancel = threading.Event()
         self.month_cache = {}
         self.calendar_signature = None
         self.calendar_selected = None
@@ -167,7 +209,11 @@ class LoggerApp:
         self.setup_style()
 
         self.status_var = tk.StringVar(value="准备就绪：点击日历选日期；本地浏览可打开网站，保存后网页自动刷新。")
-        ttk.Label(root, textvariable=self.status_var, style="Status.TLabel", padding=(14, 8)).pack(fill=tk.X)
+        status_bar = ttk.Frame(root)
+        status_bar.pack(fill=tk.X)
+        ttk.Button(status_bar, text="强制退出", command=self.force_exit).pack(side=tk.RIGHT, padx=10)
+        ttk.Label(status_bar, textvariable=self.status_var, style="Status.TLabel", padding=(14, 8)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.root.bind("<Control-Shift-Q>", lambda _event: self.force_exit())
 
         self.notebook = ttk.Notebook(root, style="App.TNotebook")
         self.notebook.pack(expand=True, fill=tk.BOTH, padx=14, pady=(8, 14))
@@ -188,6 +234,7 @@ class LoggerApp:
         self.refresh_month_entries()
         self.choose_note_date(datetime.today().strftime("%Y-%m-%d"))
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.after_idle(self.auto_sync)
 
     def ui(self, callback, *args):
         if threading.current_thread() is threading.main_thread():
@@ -992,14 +1039,90 @@ class LoggerApp:
         if self.zola_process and self.zola_process.poll() is None and self.preview_ready:
             webbrowser.open(self.preview_url())
 
+    def force_exit(self):
+        if not messagebox.askyesno("强制退出", "将备份编辑框内容并立即退出，不等待 Git 同步。\n未完成的仓库操作及 stash 备份将在下次启动时保留供检查。\n确定强制退出？"):
+            return
+        try:
+            backup_dir = REPO_PATH / ".notes_logger_drafts"
+            backup_dir.mkdir(exist_ok=True)
+            backup_path = backup_dir / (datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json")
+            data = {"note": self.note_form_snapshot(), "documents": {}}
+            for name in ("doc_mode_var", "doc_file_var", "doc_target_var", "doc_title_var", "doc_section_var", "doc_with_assets_var"):
+                variable = getattr(self, name, None)
+                if variable is not None:
+                    data["documents"][name] = variable.get()
+            with backup_path.open("w", encoding="utf-8") as backup:
+                json.dump(data, backup, ensure_ascii=False, indent=2)
+                backup.flush()
+                os.fsync(backup.fileno())
+        except OSError as exc:
+            messagebox.showerror("草稿备份失败", "尚未退出，请先复制编辑框内容。\n" + str(exc))
+            return
+        self.git_cancel.set()
+        with NETWORK_PROCESS_LOCK:
+            for process in list(NETWORK_PROCESSES):
+                kill_git_process(process)
+        self.stop_preview()
+        os._exit(0)
+
     def on_close(self):
         if self.git_busy:
-            messagebox.showinfo("同步进行中", "请等待本次仓库操作结束后再关闭，以便恢复本地改动。")
+            self.close_pending = True
+            self.skip_sync_on_close = True
+            self.git_cancel.set()
+            self.status_var.set("正在取消网络操作；恢复本地文件后保存并退出。")
             return
-        if not self.allow_note_navigation():
-            return
-        self.stop_preview()
-        self.root.destroy()
+        self.close_pending = False
+        if self.has_note_draft():
+            try:
+                self.save_note_log()
+            except OSError as exc:
+                messagebox.showerror("保存失败", str(exc))
+                return
+            if self.has_note_draft():
+                return
+        if self.skip_sync_on_close:
+            self.stop_preview()
+            self.root.destroy()
+        else:
+            self.auto_sync(close_after=True)
+
+    def auto_sync(self, close_after=False):
+        def sync():
+            ok, output = pull_repository(REPO_PATH)
+            if not ok:
+                return False, output
+            paths = [p for p in ("content/notes", "content/fixes", "content/logs", "content/tech")
+                     if (REPO_PATH / p).is_dir()]
+            if paths:
+                ok, detail = repository_git(REPO_PATH, ["add", "--"] + paths)
+                if not ok:
+                    return False, detail
+                ok, staged = repository_git(REPO_PATH, ["diff", "--cached", "--name-only", "--"] + paths)
+                if not ok:
+                    return False, staged
+                if staged:
+                    ok, detail = repository_git(REPO_PATH, ["commit", "-m", f"Auto save logs: {datetime.now():%Y-%m-%d %H:%M}", "--only", "--"] + paths)
+                    if not ok:
+                        return False, detail
+            ok, detail = repository_git(REPO_PATH, ["push"])
+            return ok, output + "\n" + detail
+
+        def finished(success):
+            if close_after:
+                # Edits made while synchronizing must also be saved before exit.
+                if self.has_note_draft():
+                    self.on_close()
+                    return
+                if success or messagebox.askyesno("自动同步未完成", "本地文件已保留。网络、权限或仓库冲突导致未能同步，请查看同步日志。\n仍要退出吗？"):
+                    self.stop_preview()
+                    self.root.destroy()
+            elif not self.has_note_draft():
+                self.choose_note_date(self.date_entry.get().strip())
+            else:
+                self.refresh_month_entries()
+
+        self.start_git_task("自动保存并同步", sync, on_complete=finished)
 
     def setup_sync_tab(self):
         ttk.Label(self.sync_tab, text="多端同步", style="Title.TLabel").pack(anchor=tk.W)
@@ -1043,18 +1166,22 @@ class LoggerApp:
                        self.pull_btn, self.check_remote_btn, self.refresh_git_btn, self.save_note_btn, self.save_doc_btn):
             button.config(state=state)
 
-    def start_git_task(self, label, worker, on_success=None):
+    def start_git_task(self, label, worker, on_success=None, on_complete=None):
         if self.git_busy:
             self.status_var.set("仓库操作进行中，请稍候。")
             return
         self.git_busy = True
+        self.git_cancel.clear()
         self.set_push_buttons_state(tk.DISABLED)
         self.status_var.set(label + "…")
         def run():
+            GIT_TASK_CONTEXT.cancel = self.git_cancel
             try:
                 success, output = worker()
             except Exception as exc:
                 success, output = False, str(exc)
+            finally:
+                del GIT_TASK_CONTEXT.cancel
             def finish():
                 self.git_busy = False
                 self.set_push_buttons_state(tk.NORMAL)
@@ -1063,6 +1190,10 @@ class LoggerApp:
                 if success and on_success:
                     on_success()
                 self.refresh_dirty_files()
+                if self.close_pending:
+                    self.root.after_idle(self.on_close)
+                elif on_complete:
+                    on_complete(success)
             self.ui(finish)
         # Finish restoring local work even if the application is closed unexpectedly.
         threading.Thread(target=run, daemon=False).start()

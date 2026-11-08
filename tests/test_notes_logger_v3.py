@@ -1,8 +1,10 @@
 """Local-only regression checks for v3; never access the user's remote or notes."""
 import importlib.util
+import os
 import subprocess
 import socket
 import time
+import threading
 import urllib.request
 import tempfile
 import tkinter as tk
@@ -106,6 +108,92 @@ class PullTests(unittest.TestCase):
         self.assertEqual(git(self.a, 'show', 'stash@{0}^3:collision.txt'), 'local untracked')
         self.assertEqual((self.a / 'collision.txt').read_text(), 'remote tracked\n')
 
+    def run_auto_sync(self):
+        app = Mock()
+        results = []
+        app.start_git_task.side_effect = lambda label, worker, **kwargs: results.append(worker())
+        with patch.object(app_module, 'REPO_PATH', self.a):
+            app_module.LoggerApp.auto_sync(app)
+        return results[0]
+
+    def test_auto_sync_pulls_remote_and_pushes_only_logs(self):
+        notes = self.a / 'content/notes'
+        notes.mkdir(parents=True)
+        (notes / 'test.md').write_text('local diary\n')
+        (self.a / 'staged.txt').write_text('unrelated staged work\n')
+        git(self.a, 'add', 'staged.txt')
+        self.publish()
+        ok, details = self.run_auto_sync()
+        self.assertTrue(ok, details)
+        self.assertEqual((self.a / 'remote.txt').read_text(), 'remote content\n')
+        self.assertEqual(git(self.remote, 'show', 'HEAD:content/notes/test.md'), 'local diary')
+        self.assertEqual(git(self.a, 'diff', '--cached', '--name-only'), 'staged.txt')
+        self.assertEqual(git(self.remote, 'show', 'HEAD:staged.txt'), 'base')
+
+    def test_auto_sync_conflict_keeps_backup_without_pushing(self):
+        (self.a / 'shared.txt').write_text('local diary\n')
+        self.publish('shared.txt', 'remote diary\n')
+        remote_head = git(self.remote, 'rev-parse', 'HEAD')
+        ok, details = self.run_auto_sync()
+        self.assertFalse(ok)
+        self.assertIn('备份保留', details)
+        self.assertEqual(git(self.a, 'show', 'stash@{0}:shared.txt'), 'local diary')
+        self.assertEqual(git(self.remote, 'rev-parse', 'HEAD'), remote_head)
+
+
+class CloseTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process group test')
+    def test_cancel_interrupts_hung_git_transport(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / 'git'
+            executable.write_text('#!/usr/bin/python3\nimport subprocess,time\nsubprocess.Popen(["sleep", "30"])\ntime.sleep(30)\n')
+            executable.chmod(0o755)
+            event = threading.Event()
+            app_module.GIT_TASK_CONTEXT.cancel = event
+            timer = threading.Timer(0.3, event.set)
+            timer.start()
+            started = time.monotonic()
+            try:
+                with patch.dict(os.environ, {'PATH': directory + os.pathsep + os.environ['PATH']}):
+                    ok, detail = app_module.repository_git(directory, ['push'])
+                self.assertFalse(ok)
+                self.assertIn('已取消', detail)
+                self.assertLess(time.monotonic() - started, 3)
+            finally:
+                timer.cancel()
+                del app_module.GIT_TASK_CONTEXT.cancel
+
+    def test_close_saves_draft_before_sync(self):
+        app = Mock(git_busy=False, skip_sync_on_close=False)
+        app.has_note_draft.side_effect = [True, False]
+        app_module.LoggerApp.on_close(app)
+        self.assertEqual(app.method_calls, [
+            unittest.mock.call.has_note_draft(), unittest.mock.call.save_note_log(),
+            unittest.mock.call.has_note_draft(), unittest.mock.call.auto_sync(close_after=True)])
+        app.root.destroy.assert_not_called()
+
+    def test_close_keeps_editor_open_when_save_fails(self):
+        app = Mock(git_busy=False, skip_sync_on_close=False)
+        app.has_note_draft.return_value = True
+        app_module.LoggerApp.on_close(app)
+        app.auto_sync.assert_not_called()
+        app.root.destroy.assert_not_called()
+
+    def test_close_waits_for_running_sync(self):
+        app = Mock(git_busy=True)
+        app_module.LoggerApp.on_close(app)
+        self.assertTrue(app.close_pending)
+        app.git_cancel.set.assert_called_once()
+        app.save_note_log.assert_not_called()
+        app.root.destroy.assert_not_called()
+
+    def test_cancelled_sync_closes_without_starting_another_push(self):
+        app = Mock(git_busy=False, skip_sync_on_close=True)
+        app.has_note_draft.return_value = False
+        app_module.LoggerApp.on_close(app)
+        app.auto_sync.assert_not_called()
+        app.root.destroy.assert_called_once()
+
 
 class GuiTests(unittest.TestCase):
     def setUp(self):
@@ -125,6 +213,7 @@ class GuiTests(unittest.TestCase):
         self.month = notes / '2026-11.md'
         self.month.write_text('+++\ntitle = "Test"\n[[extra.logs]]\nday = 2\nstatus = "学习"\ncontent = "existing entry"\n+++\n')
         self.patches = [patch.object(app_module, 'REPO_PATH', self.repo),
+                        patch.object(app_module.LoggerApp, 'auto_sync'),
                         patch.object(app_module.LoggerApp, 'auto_pull', lambda _s: None),
                         patch.object(app_module.messagebox, 'showinfo'),
                         patch.object(app_module.messagebox, 'showwarning'),
