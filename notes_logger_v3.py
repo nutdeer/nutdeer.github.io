@@ -84,10 +84,24 @@ def parse_month_entries(month_file, year, month):
                 "date": date_value,
                 "day": day,
                 "status": extract_toml_string(block, "status"),
+                "status2": extract_toml_string(block, "status2"),
                 "content": content,
+                "content2": extract_toml_string(block, "content2").replace("  ", "\n"),
             }
         )
     return sorted(entries, key=lambda entry: entry["day"], reverse=True)
+
+
+def entry_signature(entry):
+    return (entry["status"], entry["status2"], entry["content"], entry["content2"]) if entry else None
+
+
+def entry_status_label(entry):
+    return " → ".join(s for s in (entry["status"], entry["status2"]) if s)
+
+
+def entry_content_summary(entry):
+    return " · ".join(" ".join(entry[key].split()) for key in ("content", "content2") if entry[key])
 
 
 def repository_git(repo, args):
@@ -300,7 +314,7 @@ class LoggerApp:
         self.calendar_year_label.pack(side=tk.LEFT, expand=True, fill=tk.X)
         ttk.Button(nav, text="下一年", style="Soft.TButton", command=lambda: self.change_calendar_year(1)).pack(side=tk.RIGHT)
         ttk.Button(calendar_panel, text="回到今天", style="Soft.TButton", command=self.go_to_today).pack(pady=6)
-        ttk.Label(calendar_panel, text="蓝：工作  绿：学习  金：休息  灰：暂无记录", style="Hint.TLabel").pack(pady=(0, 8))
+        ttk.Label(calendar_panel, text="蓝：工作  绿：学习  金：休息  粉：其他  灰：暂无记录", style="Hint.TLabel").pack(pady=(0, 8))
         body = ttk.Frame(calendar_panel, style="App.TFrame")
         body.pack(fill=tk.BOTH, expand=True)
         self.calendar_canvas = tk.Canvas(body, width=410, bg=self.BG, highlightthickness=0)
@@ -330,16 +344,38 @@ class LoggerApp:
         self.date_entry = ttk.Entry(form)
         self.date_entry.insert(0, datetime.today().strftime("%Y-%m-%d"))
         self.date_entry.grid(row=0, column=1, sticky="ew", padx=(0, 16))
-        self.date_entry.bind("<FocusOut>", lambda _event: self.refresh_month_entries())
-        self.date_entry.bind("<Return>", lambda _event: self.refresh_month_entries())
-        ttk.Label(form, text="状态").grid(row=0, column=2, sticky="w", padx=(0, 7))
-        self.status_combo = ttk.Combobox(form, values=["工作", "学习", "休息", "Fix"], state="readonly")
+        self.date_entry.bind("<FocusOut>", self.load_date_field)
+        self.date_entry.bind("<Return>", self.load_date_field)
+        ttk.Label(form, text="第 1 状态（左上）").grid(row=0, column=2, sticky="w", padx=(0, 7))
+        self.status_combo = ttk.Combobox(form, values=["工作", "学习", "休息", "其他", "Fix"], state="readonly")
         self.status_combo.current(0)
         self.status_combo.grid(row=0, column=3, sticky="ew")
+        ttk.Label(form, text="第 2 状态（右下，可选）").grid(row=1, column=2, sticky="w", padx=(0, 7), pady=(8, 0))
+        self.status2_combo = ttk.Combobox(form, values=["", "工作", "学习", "休息", "其他"], state="readonly")
+        self.status2_combo.grid(row=1, column=3, sticky="ew", pady=(8, 0))
+        self.status_combo.bind("<<ComboboxSelected>>", self.on_note_status_change)
+        self.status2_combo.bind("<<ComboboxSelected>>", self.on_note_status_change)
+        ttk.Label(form, text="双状态按先后选择，沿左下到右上的斜线平分。", style="Hint.TLabel").grid(row=2, column=0, columnspan=4, sticky="w", pady=(6, 0))
 
-        ttk.Label(editor, text="内容").grid(row=2, column=0, sticky="w", pady=(10, 3))
-        self.content_text = tk.Text(editor, height=9, wrap=tk.WORD, bg=self.CARD, fg=self.INK, insertbackground=self.INK, relief=tk.FLAT, highlightthickness=1, highlightbackground=self.BORDER, padx=9, pady=8)
-        self.content_text.grid(row=3, column=0, columnspan=2, sticky="nsew")
+        ttk.Label(editor, text="分段内容（可拖动中间分隔条调整高度）").grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 3))
+        content_panes = ttk.Panedwindow(editor, orient=tk.VERTICAL)
+        content_panes.grid(row=3, column=0, columnspan=2, sticky="nsew")
+        for index in (1, 2):
+            panel = ttk.Frame(content_panes, style="App.TFrame")
+            content_panes.add(panel, weight=1)
+            label = ttk.Label(panel, text="第 1 段 · 工作（左上）" if index == 1 else "第 2 段（先选择第 2 状态，可选）", style="Hint.TLabel")
+            label.pack(anchor=tk.W, pady=(4, 3))
+            body = ttk.Frame(panel, style="App.TFrame")
+            body.pack(fill=tk.BOTH, expand=True)
+            text = tk.Text(body, height=6, width=30, wrap=tk.WORD, undo=True, bg=self.CARD, fg=self.INK, insertbackground=self.INK, relief=tk.FLAT, highlightthickness=1, highlightbackground=self.BORDER, padx=9, pady=8)
+            scroll = ttk.Scrollbar(body, orient=tk.VERTICAL, command=text.yview)
+            text.configure(yscrollcommand=scroll.set)
+            scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            if index == 1:
+                self.content_text, self.content_label = text, label
+            else:
+                self.content2_text, self.content2_label = text, label
         ttk.Label(editor, text="Fix：第一行是标题，余下是解决内容；只保留标题则删除同名 Fix。", style="Hint.TLabel").grid(row=4, column=0, columnspan=2, sticky="nw", pady=(5, 0))
 
         button_row = ttk.Frame(editor, style="App.TFrame")
@@ -357,16 +393,16 @@ class LoggerApp:
 
         list_frame = ttk.Frame(editor, style="App.TFrame")
         list_frame.grid(row=7, column=0, columnspan=2, sticky="nsew", pady=(6, 0))
-        editor.rowconfigure(7, weight=1)
+        editor.rowconfigure(7, weight=0)
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
-        self.month_tree = ttk.Treeview(list_frame, columns=("date", "status", "summary"), show="headings", height=6)
+        self.month_tree = ttk.Treeview(list_frame, columns=("date", "status", "summary"), show="headings", height=4)
         self.month_tree.heading("date", text="日期")
         self.month_tree.heading("status", text="状态")
         self.month_tree.heading("summary", text="内容摘要")
         self.month_tree.column("date", width=105, stretch=False, anchor=tk.CENTER)
-        self.month_tree.column("status", width=80, stretch=False, anchor=tk.CENTER)
-        self.month_tree.column("summary", width=530, anchor=tk.W)
+        self.month_tree.column("status", width=115, stretch=False, anchor=tk.CENTER)
+        self.month_tree.column("summary", width=260, anchor=tk.W)
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.month_tree.yview)
         self.month_tree.configure(yscrollcommand=scrollbar.set)
         self.month_tree.grid(row=0, column=0, sticky="nsew")
@@ -377,8 +413,16 @@ class LoggerApp:
         self.loaded_note_date = None
         self.note_disk_entry = None
 
+    def on_note_status_change(self, _event=None):
+        is_fix = self.status_combo.get() == "Fix"
+        if is_fix:
+            self.status2_combo.set("")
+        self.status2_combo.configure(state="disabled" if is_fix else "readonly")
+        self.content_label.configure(text="Fix 内容" if is_fix else "第 1 段 · " + self.status_combo.get() + "（左上）")
+        self.content2_label.configure(text="第 2 段 · " + self.status2_combo.get() + "（右下）" if self.status2_combo.get() else "第 2 段（先选择第 2 状态，可选）")
+
     def note_form_snapshot(self):
-        return (self.date_entry.get(), self.status_combo.get(), self.content_text.get("1.0", "end-1c"))
+        return (self.date_entry.get(), self.status_combo.get(), self.status2_combo.get(), self.content_text.get("1.0", "end-1c"), self.content2_text.get("1.0", "end-1c"))
 
     def has_note_draft(self):
         return self.note_form_snapshot() != self.note_baseline
@@ -397,6 +441,9 @@ class LoggerApp:
 
     def month_file_signature(self, year, month):
         path = REPO_PATH / "content" / "notes" / f"{year:04d}-{month:02d}.md"
+        if self.git_busy:
+            cached = self.month_cache.get((year, month))
+            return cached[0] if cached else (str(path), None, None)
         try:
             stat = path.stat()
             return str(path), stat.st_mtime_ns, stat.st_size
@@ -404,6 +451,9 @@ class LoggerApp:
             return str(path), None, None
 
     def get_month_entries(self, year, month):
+        if self.git_busy:
+            cached = self.month_cache.get((year, month))
+            return cached[1] if cached else []
         signature = self.month_file_signature(year, month)
         key = (year, month)
         cached = self.month_cache.get(key)
@@ -432,7 +482,7 @@ class LoggerApp:
             widget.destroy()
         self.calendar_year_label.config(text=f"{self.calendar_year} 年")
         self.month_cards, self.calendar_cells, self.calendar_summaries = {}, {}, {}
-        colors = {"工作": "#426895", "学习": "#8ba89a", "休息": "#bfa46f", "Fix": "#997bb0"}
+        colors = {"工作": "#426895", "学习": "#8ba89a", "休息": "#bfa46f", "其他": "#B77F87", "Fix": "#997bb0"}
         today = datetime.today().strftime("%Y-%m-%d")
         for month in range(1, 13):
             card = tk.Canvas(self.calendar_grid, width=190, height=218, bg=self.CARD,
@@ -452,11 +502,16 @@ class LoggerApp:
                     color = colors.get(entry["status"], "#8ba89a") if entry else ("#d2d7dd" if col >= 5 else "#e9ecef")
                     x, y = 13 + col*24, 62 + row*24
                     tag = "day:" + date_str
-                    item = card.create_rectangle(x, y, x+20, y+20, fill=color,
+                    card.create_rectangle(x, y, x+20, y+20, fill=color, outline="", tags=(tag,))
+                    if entry and entry["status2"]:
+                        card.create_polygon(x+20, y, x+20, y+20, x, y+20,
+                            fill=colors.get(entry["status2"], "#8ba89a"), outline="", tags=(tag,))
+                    # Keep the selection/today outline above both color halves.
+                    item = card.create_rectangle(x, y, x+20, y+20, fill="",
                         outline="#9d8cc7" if date_str == today else "", width=2, tags=(tag,))
                     card.create_text(x+10, y+10, text=str(day), fill="white" if entry else "#65736c", font=("Arial", 9), tags=(tag,))
                     self.calendar_cells[date_str] = (card, item)
-                    self.calendar_summaries[date_str] = "暂无记录" if not entry else entry["status"] + " · " + " ".join(entry["content"].split())[:100]
+                    self.calendar_summaries[date_str] = "暂无记录" if not entry else entry_status_label(entry) + " · " + entry_content_summary(entry)[:100]
             card.bind("<Button-1>", self.on_calendar_click)
             card.bind("<Motion>", self.on_calendar_hover)
             card.bind("<MouseWheel>", lambda e: self.calendar_canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"))
@@ -513,9 +568,6 @@ class LoggerApp:
             self.calendar_canvas.yview_moveto(max(0, top - 5) / height)
 
     def choose_note_date(self, date_str, blank=False):
-        if self.git_busy:
-            self.status_var.set("仓库同步中，请稍候再切换日期。")
-            return
         if not self.allow_note_navigation():
             return
         previous_date = self.month_from_date_field()
@@ -526,11 +578,15 @@ class LoggerApp:
         self.date_entry.delete(0, tk.END)
         self.date_entry.insert(0, date_str)
         self.status_combo.set(entry["status"] if entry else "工作")
-        self.content_text.delete("1.0", tk.END)
-        if entry:
-            self.content_text.insert("1.0", entry["content"])
+        self.status2_combo.set(entry["status2"] if entry else "")
+        self.on_note_status_change()
+        for widget, key in ((self.content_text, "content"), (self.content2_text, "content2")):
+            widget.delete("1.0", tk.END)
+            if entry:
+                widget.insert("1.0", entry[key])
+            widget.edit_reset()
         self.loaded_note_date = date_str
-        self.note_disk_entry = (disk_entry["status"], disk_entry["content"]) if disk_entry else None
+        self.note_disk_entry = entry_signature(disk_entry)
         self.note_baseline = self.note_form_snapshot()
         self.calendar_year = date_value.year
         self.refresh_month_entries()
@@ -538,7 +594,31 @@ class LoggerApp:
             if self.calendar_scroll_timer:
                 self.root.after_cancel(self.calendar_scroll_timer)
             self.calendar_scroll_timer = self.root.after(100, self.scroll_calendar_to_selected)
-        self.status_var.set(f"{date_str}：" + ("已载入日记。" if entry else "暂无记录，可以开始写。"))
+        message = "已载入日记。" if entry else "暂无记录，可以开始写。"
+        if self.git_busy:
+            message = (message if (date_value.year, date_value.month) in self.month_cache else "该月份尚未缓存，同步完成后载入。")
+            message += "同步中：显示同步前缓存，可以编辑，完成后才能保存。"
+        self.status_var.set(f"{date_str}：" + message)
+
+    def load_date_field(self, _event=None):
+        requested = self.date_entry.get().strip()
+        try:
+            datetime.strptime(requested, "%Y-%m-%d")
+        except ValueError:
+            self.status_var.set("日期格式错误，请使用 YYYY-MM-DD。")
+            return
+        if requested == self.loaded_note_date:
+            return
+        # Compare the existing draft with its original date before navigating.
+        self.date_entry.delete(0, tk.END)
+        self.date_entry.insert(0, self.loaded_note_date or self.note_baseline[0])
+        self.choose_note_date(requested)
+
+    def refresh_notes_after_sync(self):
+        if not self.has_note_draft() and self.month_from_date_field():
+            self.choose_note_date(self.date_entry.get().strip())
+        else:
+            self.refresh_month_entries()
 
     def month_from_date_field(self):
         try:
@@ -559,10 +639,10 @@ class LoggerApp:
             self.month_tree.delete(item)
         self.month_entries = {}
         for entry in self.get_month_entries(date_value.year, date_value.month):
-            summary = " ".join(entry["content"].split()) or "（无内容）"
+            summary = entry_content_summary(entry) or "（无内容）"
             if len(summary) > 75:
                 summary = summary[:74] + "…"
-            item = self.month_tree.insert("", tk.END, values=(entry["date"], entry["status"], summary))
+            item = self.month_tree.insert("", tk.END, values=(entry["date"], entry_status_label(entry), summary))
             self.month_entries[item] = entry
 
     def load_selected_month_entry(self, _event):
@@ -580,11 +660,16 @@ class LoggerApp:
             return
         date_str = self.date_entry.get().strip()
         status = self.status_combo.get()
+        status2 = self.status2_combo.get()
         content = self.content_text.get("1.0", tk.END).strip()
-        if not content:
-            messagebox.showwarning("提示", "内容不能为空！")
+        content2 = self.content2_text.get("1.0", tk.END).strip()
+        if content2 and (not status2 or status == "Fix"):
+            messagebox.showwarning("提示", "第 2 段有内容，请选择第 2 状态；若要保存为单状态或 Fix，请先合并或清空第 2 段。")
             return
         if status == "Fix":
+            if not content:
+                messagebox.showwarning("提示", "Fix 第一行标题不能为空！")
+                return
             self.save_fix_from_note(date_str, content)
             return
         try:
@@ -598,16 +683,20 @@ class LoggerApp:
         file_path = notes_dir / f"{dt:%Y-%m}.md"
         current = next((entry for entry in parse_month_entries(file_path, dt.year, dt.month)
                         if entry["date"] == date_str), None)
-        current_signature = (current["status"], current["content"]) if current else None
+        current_signature = entry_signature(current)
         if date_str == self.loaded_note_date and current_signature != self.note_disk_entry:
             messagebox.showwarning("日记已更新", "这一天的本地内容已被其他操作更新。草稿仍在编辑框中，请先复制草稿，再点击日历重新载入并核对。")
             return
         escaped_content = self.toml_escape(content.replace("\n", "  "))
-        new_block = f'\nday = {dt.day}\nstatus = "{self.toml_escape(status)}"\ncontent = "{escaped_content}"\n\n'
+        second_field = f'status2 = "{self.toml_escape(status2)}"\n' if status2 else ""
+        if content2:
+            escaped_content2 = self.toml_escape(content2.replace("\n", "  "))
+            second_field += f'content2 = "{escaped_content2}"\n'
+        new_block = f'\nday = {dt.day}\nstatus = "{self.toml_escape(status)}"\n{second_field}content = "{escaped_content}"\n\n'
 
         if not file_path.exists():
             file_path.write_text(
-                f'''+++\ntitle = "{dt.year}年{dt.month}月日志"\ndate = {dt:%Y-%m}-01\n# 【必读说明】\n# date 是必需的，Zola 靠它来判断哪个月在前面，哪个月在后面。title 可留作备忘。\n# status 状态可选词："工作"、"休息"、"学习"。\n\n[[extra.logs]]{new_block}+++\n''',
+                f'''+++\ntitle = "{dt.year}年{dt.month}月日志"\ndate = {dt:%Y-%m}-01\n# 【必读说明】\n# date 是必需的，Zola 靠它来判断哪个月在前面，哪个月在后面。title 可留作备忘。\n# status 为第 1 状态，status2 为可选的第 2 状态，按先后顺序保存。\n# 状态可选词："工作"、"休息"、"学习"、"其他"。\n\n[[extra.logs]]{new_block}+++\n''',
                 encoding="utf-8",
             )
             action_msg = "已创建新月份并写入。"
@@ -640,7 +729,7 @@ class LoggerApp:
 
         self.note_baseline = self.note_form_snapshot()
         self.loaded_note_date = date_str
-        self.note_disk_entry = (status, content.replace("\n", "  ").replace("  ", "\n"))
+        self.note_disk_entry = (status, status2, content.replace("\n", "  ").replace("  ", "\n"), content2.replace("\n", "  ").replace("  ", "\n"))
         self.status_var.set(f"{date_str} 已保存，本地网页会自动刷新；尚未推送。")
         self.refresh_month_entries()
 
@@ -1131,10 +1220,6 @@ class LoggerApp:
                 if success or messagebox.askyesno("自动同步未完成", "本地文件已保留。网络、权限或仓库冲突导致未能同步，请查看同步日志。\n仍要退出吗？"):
                     self.stop_preview()
                     self.root.destroy()
-            elif not self.has_note_draft():
-                self.choose_note_date(self.date_entry.get().strip())
-            else:
-                self.refresh_month_entries()
 
         self.start_git_task("自动保存并同步", sync, on_complete=finished)
 
@@ -1172,8 +1257,10 @@ class LoggerApp:
         return repository_git(REPO_PATH, args[1:] if args[0] == "git" else args)
 
     def refresh_dirty_files(self):
-        success, output = self.run_git_cmd(["git", "status", "--short"])
-        self.log_git_msg("\n--- 未提交更改 ---\n" + (output or "无未提交更改。" if success else "无法读取 git 状态。\n" + output))
+        def read_status():
+            success, output = self.run_git_cmd(["git", "status", "--short"])
+            self.log_git_msg("\n--- 未提交更改 ---\n" + (output or "无未提交更改。" if success else "无法读取 git 状态。\n" + output))
+        threading.Thread(target=read_status, daemon=True).start()
 
     def set_push_buttons_state(self, state):
         for button in (self.push_notes_btn, self.push_logs_btn, self.push_all_btn,
@@ -1199,6 +1286,7 @@ class LoggerApp:
             def finish():
                 self.git_busy = False
                 self.set_push_buttons_state(tk.NORMAL)
+                self.refresh_notes_after_sync()
                 self.log_git_msg("\n--- " + label + " ---\n" + output)
                 self.status_var.set(label + ("完成。" if success else "未完成，请查看同步日志。"))
                 if success and on_success:
@@ -1225,14 +1313,7 @@ class LoggerApp:
         self.start_git_task("检查远端", check)
 
     def manual_pull(self):
-        def reload_local():
-            date_str = self.date_entry.get().strip()
-            if not self.has_note_draft() and self.month_from_date_field():
-                self.choose_note_date(date_str)
-            else:
-                self.refresh_month_entries()
-                self.status_var.set("拉取完成；编辑框中未保存的草稿已保留。")
-        self.start_git_task("拉取远端更新", lambda: pull_repository(REPO_PATH), reload_local)
+        self.start_git_task("拉取远端更新", lambda: pull_repository(REPO_PATH))
 
     def push_paths(self, paths, label, commit_prefix):
         def push():

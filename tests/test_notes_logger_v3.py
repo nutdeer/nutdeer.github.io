@@ -154,14 +154,14 @@ class PullTests(unittest.TestCase):
 class CloseTests(unittest.TestCase):
     def test_force_exit_backs_up_editor_even_when_sync_is_busy(self):
         app = Mock(git_busy=True, zola_process=None)
-        app.note_form_snapshot.return_value = ('2026-11-08', '工作', '未保存的草稿')
+        app.note_form_snapshot.return_value = ('2026-11-08', '工作', '学习', '未保存的草稿', '第二段草稿')
         for name in ('doc_mode_var', 'doc_file_var', 'doc_target_var', 'doc_title_var', 'doc_section_var', 'doc_with_assets_var', 'doc_date_var', 'doc_description_var', 'doc_tags_var'):
             getattr(app, name).get.return_value = 'draft'
         with tempfile.TemporaryDirectory() as directory, patch.object(app_module, 'REPO_PATH', Path(directory)), patch.object(app_module.messagebox, 'askyesno', return_value=True), patch.object(app_module.os, '_exit') as exit_process:
             app_module.LoggerApp.force_exit(app)
             backups = list((Path(directory) / '.notes_logger_drafts').glob('*.json'))
             self.assertEqual(len(backups), 1)
-            self.assertEqual(json.loads(backups[0].read_text())['note'][2], '未保存的草稿')
+            self.assertEqual(json.loads(backups[0].read_text())['note'][2:], ['学习', '未保存的草稿', '第二段草稿'])
             exit_process.assert_called_once_with(0)
             app.auto_sync.assert_not_called()
 
@@ -237,6 +237,126 @@ class CloseTests(unittest.TestCase):
         app.root.destroy.assert_called_once()
 
 
+class NoteStatusTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repo = Path(self.temp.name)
+        self.month = self.repo / 'content/notes/2026-11.md'
+        self.month.parent.mkdir(parents=True)
+        self.month.write_text('+++\ntitle = "Test"\ndate = 2026-11-01\n[[extra.logs]]\nday = 2\nstatus = "学习"\ncontent = "original"\n+++\n')
+        self.app = app_module.LoggerApp.__new__(app_module.LoggerApp)
+        self.app.git_busy = False
+        self.app.loaded_note_date = '2026-11-02'
+        self.app.note_disk_entry = ('学习', '', 'original', '')
+        self.app.date_entry = Mock()
+        self.app.date_entry.get.return_value = '2026-11-02'
+        self.app.status_combo = Mock()
+        self.app.status_combo.get.return_value = '学习'
+        self.app.status2_combo = Mock()
+        self.app.status2_combo.get.return_value = '工作'
+        self.app.content_text = Mock()
+        self.app.content_text.get.return_value = 'updated diary'
+        self.app.content2_text = Mock()
+        self.app.content2_text.get.return_value = ''
+        self.app.status_var = Mock()
+        self.app.refresh_month_entries = Mock()
+        for patcher in (patch.object(app_module, 'REPO_PATH', self.repo),
+                        patch.object(app_module.messagebox, 'showwarning')):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def entry(self):
+        return app_module.parse_month_entries(self.month, 2026, 11)[0]
+
+    def test_legacy_entry_has_optional_empty_second_status(self):
+        self.assertEqual(app_module.entry_signature(self.entry()), ('学习', '', 'original', ''))
+
+    def test_empty_diary_status_can_be_changed_and_saved(self):
+        self.month.write_text(self.month.read_text().replace('content = "original"', 'content = ""'))
+        self.app.note_disk_entry = ('学习', '', '', '')
+        self.app.status_combo.get.return_value = '其他'
+        self.app.status2_combo.get.return_value = ''
+        self.app.content_text.get.return_value = ''
+        self.app.save_note_log()
+        self.assertEqual(app_module.entry_signature(self.entry()), ('其他', '', '', ''))
+        app_module.messagebox.showwarning.assert_not_called()
+
+    def test_two_statuses_round_trip_in_order_and_can_be_reversed(self):
+        self.app.save_note_log()
+        self.assertEqual(app_module.entry_status_label(self.entry()), '学习 → 工作')
+        self.assertFalse(self.app.has_note_draft())
+        self.app.status_combo.get.return_value = '工作'
+        self.app.status2_combo.get.return_value = '学习'
+        self.assertTrue(self.app.has_note_draft())
+        self.app.save_note_log()
+        self.assertEqual(app_module.entry_status_label(self.entry()), '工作 → 学习')
+        app_module.messagebox.showwarning.assert_not_called()
+
+    def test_second_status_can_be_removed(self):
+        self.app.save_note_log()
+        self.app.status2_combo.get.return_value = ''
+        self.app.save_note_log()
+        self.assertEqual(self.entry()['status2'], '')
+        self.assertNotIn('status2 =', self.month.read_text())
+
+    def test_external_second_status_change_blocks_overwrite(self):
+        self.month.write_text(self.month.read_text().replace('status = "学习"', 'status = "学习"\nstatus2 = "休息"'))
+        before = self.month.read_text()
+        self.app.save_note_log()
+        app_module.messagebox.showwarning.assert_called_once()
+        self.assertEqual(self.month.read_text(), before)
+
+    def test_separate_contents_round_trip_and_dirty_tracking(self):
+        self.app.content2_text.get.return_value = 'second diary\nnext line'
+        self.app.save_note_log()
+        self.assertEqual(self.entry()['content'], 'updated diary')
+        self.assertEqual(self.entry()['content2'], 'second diary\nnext line')
+        self.assertFalse(self.app.has_note_draft())
+        self.app.content2_text.get.return_value = 'revised second diary'
+        self.assertTrue(self.app.has_note_draft())
+        self.app.save_note_log()
+        self.assertEqual(self.entry()['content2'], 'revised second diary')
+        app_module.messagebox.showwarning.assert_not_called()
+
+    def test_content2_without_status_is_preserved_in_editor(self):
+        self.app.status2_combo.get.return_value = ''
+        self.app.content2_text.get.return_value = 'must not discard'
+        before = self.month.read_text()
+        self.app.save_note_log()
+        app_module.messagebox.showwarning.assert_called_once()
+        self.assertEqual(self.month.read_text(), before)
+        self.assertEqual(self.app.content2_text.get(), 'must not discard')
+
+    def test_external_second_content_change_blocks_overwrite(self):
+        self.app.save_note_log()
+        self.month.write_text(self.month.read_text().replace('status2 = "工作"', 'status2 = "工作"\ncontent2 = "external second content"'))
+        before = self.month.read_text()
+        self.app.save_note_log()
+        app_module.messagebox.showwarning.assert_called_once()
+        self.assertEqual(self.month.read_text(), before)
+
+    def test_cached_entries_remain_stable_while_sync_changes_disk(self):
+        self.app.month_cache = {}
+        original = self.app.get_month_entries(2026, 11)
+        signature = self.app.month_file_signature(2026, 11)
+        self.app.git_busy = True
+        self.month.write_text(self.month.read_text().replace('original', 'new remote content'))
+        with patch.object(app_module, 'parse_month_entries') as parse:
+            self.assertEqual(self.app.get_month_entries(2026, 11), original)
+            self.assertEqual(self.app.month_file_signature(2026, 11), signature)
+            parse.assert_not_called()
+        self.app.git_busy = False
+        self.assertEqual(self.app.get_month_entries(2026, 11)[0]['content'], 'new remote content')
+
+    def test_fix_keeps_separate_save_path(self):
+        self.app.status_combo.get.return_value = 'Fix'
+        self.app.save_fix_from_note = Mock()
+        self.app.save_note_log()
+        self.app.save_fix_from_note.assert_called_once_with('2026-11-02', 'updated diary')
+        self.assertEqual(self.entry()['content'], 'original')
+
+
 class GuiTests(unittest.TestCase):
     def setUp(self):
         try:
@@ -255,7 +375,7 @@ class GuiTests(unittest.TestCase):
         self.month = notes / '2026-11.md'
         self.month.write_text('+++\ntitle = "Test"\n[[extra.logs]]\nday = 2\nstatus = "学习"\ncontent = "existing entry"\n+++\n')
         self.patches = [patch.object(app_module, 'REPO_PATH', self.repo),
-                        patch.object(app_module.LoggerApp, 'auto_sync'),
+                        patch.object(app_module.LoggerApp, 'auto_sync', lambda _self: None),
                         patch.object(app_module.LoggerApp, 'auto_pull', lambda _s: None),
                         patch.object(app_module.messagebox, 'showinfo'),
                         patch.object(app_module.messagebox, 'showwarning'),
@@ -290,6 +410,101 @@ class GuiTests(unittest.TestCase):
         self.app.save_note_log()
         app_module.messagebox.showwarning.assert_not_called()
         self.assertIn('existing entry', self.month.read_text())
+
+    def test_dual_status_editor_calendar_and_reload(self):
+        self.app.choose_note_date('2026-11-02')
+        self.app.status2_combo.set('工作')
+        self.app.content2_text.insert('1.0', 'second segment')
+        self.app.save_note_log()
+        self.app.choose_note_date('2026-11-03')
+        self.assertEqual(self.app.status2_combo.get(), '')
+        self.app.choose_note_date('2026-11-02')
+        self.assertEqual(self.app.status2_combo.get(), '工作')
+        self.assertEqual(self.app.content2_text.get('1.0', 'end-1c'), 'second segment')
+        card, outline = self.app.calendar_cells['2026-11-02']
+        polygons = [item for item in card.find_withtag('day:2026-11-02') if card.type(item) == 'polygon']
+        self.assertEqual(len(polygons), 1)
+        self.assertEqual(card.itemcget(polygons[0], 'fill'), '#426895')
+        x1, y1, x2, y2 = card.coords(outline)
+        self.assertEqual(card.coords(polygons[0]), [x2, y1, x2, y2, x1, y2])
+        self.assertIn('学习 → 工作', self.app.calendar_summaries['2026-11-02'])
+
+    def test_both_editors_remain_visible_at_supported_window_sizes(self):
+        self.root.deiconify()
+        for width, height in ((1160, 850), (1000, 740)):
+            self.root.geometry(f'{width}x{height}')
+            self.root.update()
+            for widget in (self.app.content_text, self.app.content2_text):
+                self.assertGreaterEqual(widget.winfo_height(), 65)
+                self.assertGreaterEqual(widget.winfo_width(), 200)
+                self.assertLessEqual(widget.winfo_rooty() + widget.winfo_height(),
+                                     self.root.winfo_rooty() + self.root.winfo_height())
+
+    def test_typed_date_loads_both_fields_without_false_draft_prompt(self):
+        self.app.choose_note_date('2026-11-03')
+        self.app.date_entry.delete(0, tk.END)
+        self.app.date_entry.insert(0, '2026-11-02')
+        app_module.messagebox.askyesno.reset_mock()
+        self.app.load_date_field()
+        self.assertEqual(self.app.loaded_note_date, '2026-11-02')
+        self.assertEqual(self.app.content_text.get('1.0', 'end-1c'), 'existing entry')
+        self.assertEqual(self.app.content2_text.get('1.0', 'end-1c'), '')
+        app_module.messagebox.askyesno.assert_not_called()
+
+    def test_typed_date_can_cancel_navigation_and_preserve_second_draft(self):
+        self.app.choose_note_date('2026-11-02')
+        self.app.content2_text.insert('1.0', 'second draft')
+        self.app.date_entry.delete(0, tk.END)
+        self.app.date_entry.insert(0, '2026-11-03')
+        with patch.object(app_module.messagebox, 'askyesno', return_value=False):
+            self.app.load_date_field()
+        self.assertEqual(self.app.date_entry.get(), '2026-11-02')
+        self.assertEqual(self.app.content2_text.get('1.0', 'end-1c'), 'second draft')
+
+    def test_month_list_click_during_slow_sync_uses_cache_and_preserves_draft(self):
+        self.app.choose_note_date('2026-11-03')
+        release, changed = threading.Event(), threading.Event()
+        def worker():
+            self.month.write_text(self.month.read_text().replace('existing entry', 'new remote version'))
+            changed.set()
+            release.wait(5)
+            return True, 'done'
+        self.addCleanup(release.set)
+        with patch.object(self.app, 'refresh_dirty_files'):
+            self.app.start_git_task('Slow local test', worker)
+            self.assertTrue(changed.wait(2))
+            item = next(i for i, entry in self.app.month_entries.items() if entry['day'] == 2)
+            self.app.month_tree.selection_set(item)
+            before = time.monotonic()
+            self.root.update()
+            self.assertLess(time.monotonic() - before, 0.5)
+            self.assertTrue(self.app.git_busy)
+            self.assertEqual(self.app.loaded_note_date, '2026-11-02')
+            self.assertEqual(self.app.content_text.get('1.0', 'end-1c'), 'existing entry')
+            self.app.status2_combo.set('工作')
+            self.app.content2_text.insert('1.0', 'draft during sync')
+            self.app.save_note_log()
+            self.assertIn('new remote version', self.month.read_text())
+            release.set()
+            deadline = time.monotonic() + 3
+            while self.app.git_busy and time.monotonic() < deadline:
+                self.root.update()
+                time.sleep(0.01)
+            self.assertFalse(self.app.git_busy)
+        self.assertEqual(self.app.content2_text.get('1.0', 'end-1c'), 'draft during sync')
+        self.assertEqual(self.app.get_month_entries(2026, 11)[0]['content'], 'new remote version')
+        self.app.save_note_log()
+        app_module.messagebox.showwarning.assert_called_once()
+
+    def test_sync_refreshes_unedited_date_after_cache_navigation(self):
+        self.app.choose_note_date('2026-11-03')
+        self.app.git_busy = True
+        self.month.write_text(self.month.read_text().replace('existing entry', 'updated while syncing'))
+        self.app.choose_note_date('2026-11-02')
+        self.assertEqual(self.app.content_text.get('1.0', 'end-1c'), 'existing entry')
+        self.app.git_busy = False
+        self.app.refresh_notes_after_sync()
+        self.assertEqual(self.app.content_text.get('1.0', 'end-1c'), 'updated while syncing')
 
     def test_date_selection_reuses_calendar_and_month_parse(self):
         cards = dict(self.app.month_cards)
@@ -380,8 +595,7 @@ class GuiTests(unittest.TestCase):
         self.app.choose_note_date('2026-11-02')
         self.app.content_text.insert(tk.END, ' my draft')
         self.month.write_text(self.month.read_text().replace('existing entry', 'new remote version'))
-        with patch.object(self.app, 'start_git_task', side_effect=lambda label, worker, after: after()):
-            self.app.manual_pull()
+        self.app.refresh_notes_after_sync()
         self.assertIn('my draft', self.app.content_text.get('1.0', 'end-1c'))
         self.assertEqual(self.app.get_month_entries(2026, 11)[0]['content'], 'new remote version')
 

@@ -10,6 +10,7 @@
     --cal-work: #43688f;     
     --cal-rest: #8ba89a;     
     --cal-study: #c2a878;
+    --cal-other: #B77F87;
     --cal-tooltip-bg: rgba(255, 255, 255, 0.95);
     --cal-tooltip-border: var(--border);
     --cal-tooltip-shadow: rgba(0, 0, 0, 0.15);
@@ -82,6 +83,9 @@ body.dark {
 /* 今天的格子：单层淡紫描边标记，不随记录状态变色 */
 .day-cell.is-today { box-shadow: 0 0 0 3px var(--cal-today-ring); }
 
+/* The first status is top-left; the second is bottom-right. */
+.day-cell.dual-status { background: linear-gradient(to bottom right, var(--day-first) 50%, var(--day-second) 50%); }
+
 .bg-empty-wd { background-color: var(--cal-empty-wd); }
 .bg-empty-we { background-color: var(--cal-empty-we); }
 .bg-work { background-color: var(--cal-work); }
@@ -120,6 +124,8 @@ body.dark {
 .log-content p { margin: 5px 0 0 0; color: var(--primary); font-size: 16px; line-height: 1.6; }
 .log-content strong,
 .tooltip strong { font-weight: 700; color: var(--primary); }
+.log-segment + .log-segment { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.tooltip-segment + .tooltip-segment { margin-top: 10px; }
 .status-badge { font-size: 12px; padding: 3px 8px; border-radius: 12px; font-weight: bold; color: white;}
 </style>
 
@@ -151,12 +157,27 @@ body.dark {
                         {% set badge_color = "var(--cal-work)" %}
                         {% if log.status == "休息" %}{% set badge_color = "var(--cal-rest)" %}{% endif %}
                         {% if log.status == "学习" %}{% set badge_color = "var(--cal-study)" %}{% endif %}
+                        {% if log.status == "其他" %}{% set badge_color = "var(--cal-other)" %}{% endif %}
                         
                         <div class="timeline-item" style="--dot-color: {{ badge_color }};">
                             <div class="date-label">{{ month }}-{% if log.day < 10 %}0{{ log.day }}{% else %}{{ log.day }}{% endif %}</div>
                             <div class="log-content">
-                                <span class="status-badge" style="background-color: {{ badge_color }};">{{ log.status }}</span>
-                                <p>{{ log.content | markdown(inline=true) | safe }}</p>
+                                <div class="log-segment">
+                                    <span class="status-badge" style="background-color: {{ badge_color }};">{{ log.status }}</span>
+                                    <p>{{ log.content | markdown(inline=true) | safe }}</p>
+                                </div>
+                                {% if log.status2 is defined and log.status2 != "" %}
+                                    {% set second_color = "var(--cal-work)" %}
+                                    {% if log.status2 == "休息" %}{% set second_color = "var(--cal-rest)" %}{% endif %}
+                                    {% if log.status2 == "学习" %}{% set second_color = "var(--cal-study)" %}{% endif %}
+                                    {% if log.status2 == "其他" %}{% set second_color = "var(--cal-other)" %}{% endif %}
+                                    <div class="log-segment">
+                                        <span class="status-badge" style="background-color: {{ second_color }};">{{ log.status2 }}</span>
+                                        {% if log.content2 is defined and log.content2 != "" %}
+                                            <p>{{ log.content2 | markdown(inline=true) | safe }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     {% endfor %}
@@ -173,7 +194,7 @@ const journalData = {
     "{{ page.date | date(format='%Y-%m') }}": [
         {% if page.extra.logs %}
             {% for log in page.extra.logs %}
-            { day: {{ log.day }}, status: "{{ log.status }}", content: "{{ log.content | markdown(inline=true) | replace(from='\\', to='\\\\') | replace(from='"', to='\\"') | safe }}" }{% if not loop.last %},{% endif %}
+            { day: {{ log.day }}, status: {{ log.status | json_encode | safe }}, status2: {{ log.status2 | default(value="") | json_encode | safe }}, content2: {{ log.content2 | default(value="") | markdown(inline=true) | json_encode | replace(from="<", to="\u003c") | safe }}, content: {{ log.content | markdown(inline=true) | json_encode | replace(from="<", to="\u003c") | safe }} }{% if not loop.last %},{% endif %}
             {% endfor %}
         {% endif %}
     ]{% if not loop.last %},{% endif %}
@@ -193,6 +214,14 @@ function initYearSelect() {
 function changeYear(year) {
     currentYear = year;
     renderCalendar();
+}
+
+function statusColor(status) {
+    return ({'工作': 'var(--cal-work)', '休息': 'var(--cal-rest)', '学习': 'var(--cal-study)', '其他': 'var(--cal-other)'})[status] || 'var(--cal-empty-wd)';
+}
+
+function escapeStatus(status) {
+    return status.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 }
 
 function renderCalendar() {
@@ -234,22 +263,20 @@ function renderCalendar() {
             let colorClass = isWeekend ? 'bg-empty-we' : 'bg-empty-wd';
             let tooltipText = `${m}月${d}日<br>暂无记录`;
 
+            let colorStyle = '';
             if (log) {
-                if (log.status === '工作') colorClass = 'bg-work';
-                else if (log.status === '休息') colorClass = 'bg-rest';
-                else if (log.status === '学习') colorClass = 'bg-study';
-
-                let badgeColor = colorClass === 'bg-work' ? 'var(--cal-work)' : (colorClass === 'bg-rest' ? 'var(--cal-rest)' : 'var(--cal-study)');
-                
+                colorStyle = `--day-first: ${statusColor(log.status)}; --day-second: ${statusColor(log.status2)}; background-color: ${statusColor(log.status)};`;
+                if (log.status2) colorClass = 'dual-status';
+                const segments = [[log.status, log.content], [log.status2, log.content2]].filter(([status]) => status);
+                const details = segments.map(([status, content]) => `<section class="tooltip-segment"><span class="tooltip-status" style="background-color: ${statusColor(status)};">${escapeStatus(status)}</span><br>${content || ''}</section>`).join('');
                 tooltipText = `
                     <div style="margin-bottom: 5px;">${currentYear}年${m}月${d}日</div>
-                    <span class="tooltip-status" style="background-color: ${badgeColor};">${log.status}</span>
-                    <br>${log.content}
+                    ${details}
                 `;
             }
 
             html += `
-                <div class="day-cell interactive ${colorClass}${isToday ? ' is-today' : ''}">
+                <div class="day-cell interactive ${colorClass}${isToday ? ' is-today' : ''}" style="${colorStyle}">
                     <div class="tooltip">${tooltipText}</div>
                 </div>
             `;

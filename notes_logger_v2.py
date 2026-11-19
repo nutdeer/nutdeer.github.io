@@ -151,7 +151,7 @@ class LoggerApp:
         self.date_entry.bind("<FocusOut>", lambda _event: self.refresh_month_entries())
         self.date_entry.bind("<Return>", lambda _event: self.refresh_month_entries())
         ttk.Label(form, text="状态").grid(row=0, column=2, sticky="w", padx=(0, 7))
-        self.status_combo = ttk.Combobox(form, values=["工作", "学习", "休息", "Fix"], state="readonly")
+        self.status_combo = ttk.Combobox(form, values=["工作", "学习", "休息", "其他", "Fix"], state="readonly")
         self.status_combo.current(0)
         self.status_combo.grid(row=0, column=3, sticky="ew")
 
